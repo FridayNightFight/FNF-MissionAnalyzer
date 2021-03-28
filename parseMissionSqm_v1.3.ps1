@@ -300,7 +300,7 @@ function Out-Mission {
 		return $false;
 	}
 
-	# Get file contents
+	# Make sure mission isn't binarized
 	if (Test-IfBinary (Get-Content $FilePathSQM -Raw)) {
 		Write-Host -ForegroundColor Red "Mission is binarized and cannot be read."
 		Pause
@@ -322,12 +322,45 @@ function Out-Mission {
 	# Get config.sqf path
 	$FilePathConfig = "$FilePathMission\config.sqf"
 
-
+	# Get file contents
 	$FileContentSQM = (Get-Content $FilePathSQM).Trim()
 	$FileContentConfig = (Get-Content $FilePathConfig).Trim()
 
-	
-	. ".\dist\parseSqm.exe" $filePathSqm | Out-Null
+
+	# Remove prefix added by Mikero's derapping tools
+	$VersionLine = Get-Content $FilePathSQM | Select-String -Pattern '^version[\s]{0,1}=[\s]{0,1}[\d]{1,3};$' | Select-Object -ExpandProperty Line
+	if ($VersionLine) {
+		$VersionLinePos = (Get-Content $FilePathSQM).IndexOf($VersionLine)
+		if ($VersionLinePos -gt 0) {
+			# Write as UTF8 No BOM
+			[System.IO.File]::WriteAllLines(
+				$FilePathSQM,
+				((Get-Content $FilePathSQM)[$VersionLinePos..$FileContentSQM.Length] | Out-String))
+		}
+	}
+
+	# Make sure python is installed
+	try {
+		$PyVer = python -V
+		$PyVer = [Regex]::Matches($PyVer, '(\d).(\d).(\d)')
+		if ($PyVer.Groups[1].Value -lt 3 -or ($Pyver.Groups[1].Value -eq 3 -and $PyVer.Groups[2].Value -lt 4)) {
+			Write-Warning "Python version is $(python -V), less than the required 3.4+."
+			Pause
+			exit
+		}
+	} catch {
+		Write-Warning "Python 3.4+ not installed, exiting..."
+		Pause
+		exit
+	}
+	# run python parser utility
+	if ($null -ne (pip show armaclass)) {
+		Write-Debug "armaclass package already installed"
+	} else {
+		pip install armaclass
+	}
+
+	python parseSqm.py $FilePathSQM
 	if ($LASTEXITCODE -ne 0) {
 		Write-Host -ForegroundColor Red "Failed to parse the SQM file. Please ensure it hasn't been manually modified and is unbinarized."
 		Pause
@@ -354,7 +387,7 @@ function Out-Mission {
 	[Array] $CommentObjs = @()
 	ForEach ($Item in $SQMEntitiesHash.GetEnumerator()) {
 		switch ($Item.value.dataType) {
-			"Group" {$GroupObjs += $Item.value}
+			"Group" { $GroupObjs += $Item.value }
 			"Object" { $ObjectObjs += $Item.value }
 			"Layer" { $LayerObjs += $Item.value }
 			"Marker" { $MarkerObjs += $Item.value }
@@ -369,23 +402,23 @@ function Out-Mission {
 		$UnitObjsHash[$property] = $GroupObjs.Entities.$property
 	}
 	ForEach ($Unit in $GroupObjs.Entities) {
-					$UnitObjs += $Unit
-				}
+		$UnitObjs += $Unit
+	}
 	$GroupObjs | Select-Object dataType, side, entities | Out-GridView
 	$ObjectObjs | Select-Object @(
 		"dataType",
 		"type",
-		@{n="name";e={$_.Attributes.name}},
-		@{n="lock";e={$_.Attributes.lock}},
-		@{n="fuel";e={$_.Attributes.fuel}},
-		@{n="ammo";e={$_.Attributes.ammo}},
-		@{n="init";e={$_.Attributes.init}},
-		@{n="textures";e={$_.Attributes.textures}}
+		@{n = "name"; e = { $_.Attributes.name } },
+		@{n = "lock"; e = { $_.Attributes.lock } },
+		@{n = "fuel"; e = { $_.Attributes.fuel } },
+		@{n = "ammo"; e = { $_.Attributes.ammo } },
+		@{n = "init"; e = { $_.Attributes.init } },
+		@{n = "textures"; e = { $_.Attributes.textures } }
 	) | Out-GridView
 	$LayerObjs | Select-Object dataType, name, entities | Out-GridView
 	$MarkerObjs | Select-Object dataType, name, markerType | Out-GridView
 	$LogicObjs | Select-Object dataType, name, presenceCondition, type | Out-GridView
-	$TriggerObjs | Select-Object dataType, @{n="name";e={$_.Attributes.name}} | Out-GridView
+	$TriggerObjs | Select-Object dataType, @{n = "name"; e = { $_.Attributes.name } } | Out-GridView
 	$CommentObjs | Select-Object dataType, description | Out-GridView
 
 
@@ -1256,7 +1289,10 @@ if ($AllUnknowns.count -gt 1) {
 
 
 			<h2>Weather Settings</h2>
+			<h3>Starting Values</h3>
 			$($WeatherStart | ConvertTo-Html -Fragment)
+			<br>
+			<h3>Forecast Values</h3>
 			$($WeatherForecast | ConvertTo-Html -Fragment)
 
 			<br><br>

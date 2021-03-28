@@ -7,6 +7,7 @@ import json
 
 print(sys.argv[1])
 sqm = open(sys.argv[1], "r")
+# sqm = open("C:\Users\indif\Downloads\FNF_Nemesis_shaken_Destroy_v1_Any.Tanoa\mission.sqm", "r")
 testmission = sqm.read()
 sqm.close()
 
