@@ -2086,11 +2086,11 @@ function Out-IndexFile {
 
 $ErrorActionPreference = "Inquire"
 
-$Version = ($PSCommandPath -split 'v')[-1] -replace '.ps1', ''
+$Version = Get-ChildItem -File | Where-Object {$_.Name -match '^v\d.\d.\d$'} | Select-Object -ExpandProperty Name
 
 $Host.UI.RawUI.BackgroundColor = "Black"
 $Host.UI.RawUI.ForegroundColor = "Gray"
-$Host.UI.RawUI.WindowTitle = "FNF Mission Analyzer v$Version"
+$Host.UI.RawUI.WindowTitle = "FNF Mission Analyzer $Version"
 Clear-Host
 
 
