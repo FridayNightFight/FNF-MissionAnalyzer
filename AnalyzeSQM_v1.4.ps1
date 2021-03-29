@@ -1743,6 +1743,13 @@ function Out-Mission {
 			Write-Output "<button class='accordion issuebg'>Required Game Objects (Missing $($MissingCoreMechanicsObjs.count))</button>"
 			Write-Output '<div class="panel">'
 			Write-Output '<h3 class=issuetxt>Missing Game Objects</h3>'
+			Write-Output '<p>The following missing items can be ignored:</p>'
+			Write-Output '
+			<ul>
+				<li>Safe Start markers for non-playing factions</li>
+				<li>Terminal 3 in 2-terminal game modes</li>
+			</ul>
+			'
 
 				$($MissingCoreMechanicsObjs | ConvertTo-Html -Fragment)
 
