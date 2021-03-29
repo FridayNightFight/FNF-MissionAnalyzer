@@ -52,7 +52,7 @@ Discord: IndigoFox#6290
 # $AllUnits
 
 # List of C2/Golf role descriptions that have been changed
-# $LabeledSpecialUnits
+# $LabeledSpecialUnitsGolfHotel
 
 
 
@@ -372,11 +372,16 @@ function Out-Mission {
 	Start-Sleep 1
 	Remove-Item ".\sqmjson.txt" -Force
 
+
+
+	# Convert the PSCustomObject master mission info list into a hashtable
+
 	[Hashtable] $SQMEntitiesHash = @{}
 	foreach ( $property in $SQMJson.Mission.Entities.psobject.properties.name ) {
 		$SQMEntitiesHash[$property] = $SQMJson.Mission.Entities.$property
 	}
 
+	# Grab all the different objects from the master entities table
 	[Array] $GroupObjs = @()
 	[Array] $UnitObjs = @()
 	[Array] $ObjectObjs = @()
@@ -396,15 +401,46 @@ function Out-Mission {
 			"Comment" { $CommentObjs += $Item.value }
 		}
 	}
-	# ! FIX
-	[Hashtable] $UnitObjsHash = @{}
-	foreach ( $property in $GroupObjs.Entities.psobject.properties.name ) {
-		$UnitObjsHash[$property] = $GroupObjs.Entities.$property
+	# for each group, will grab soldier units (up to 12 per group) and put them in separate array
+	for ($i = 0; $i -le 12; $i++) {
+		if (!$GroupObjs.Entities."Item$i") { continue }
+		ForEach ($Unit in $GroupObjs.Entities."Item$i") {
+			$UnitObjs += $Unit
+		}
 	}
-	ForEach ($Unit in $GroupObjs.Entities) {
-		$UnitObjs += $Unit
-	}
-	$GroupObjs | Select-Object dataType, side, entities | Out-GridView
+	$UnitObjs = $UnitObjs | Select-Object @(
+		"dataType",
+		"side",
+		"type",
+		@{n = "unitName"; e = { ($_.Attributes.description -split '@')[0]} },
+		@{n = "groupName"; e = { ($_.Attributes.description -split '@')[1] } },
+		@{n = "init"; e = { $_.Attributes.init } }
+	)
+	$ObjectObjs = $ObjectObjs | Select-Object @(
+		"dataType",
+		"type",
+		@{n = "name"; e = { $_.Attributes.name } },
+		@{n = "lock"; e = { $_.Attributes.lock } },
+		@{n = "fuel"; e = { $_.Attributes.fuel } },
+		@{n = "ammo"; e = { $_.Attributes.ammo } },
+		@{n = "init"; e = { $_.Attributes.init } },
+		@{n = "textures"; e = { $_.Attributes.textures } }
+	)
+	$LayerObjs = $LayerObjs | Select-Object dataType, name, entities
+	$MarkerObjs = $MarkerObjs | Select-Object dataType, name, markerType
+	$LogicObjs = $LogicObjs | Select-Object dataType, name, presenceCondition, type
+	$TriggerObjs = $TriggerObjs | Select-Object dataType, @{n = "name"; e = { $_.Attributes.name } }
+	$CommentObjs = $CommentObjs | Select-Object dataType, description
+
+	# EXAMPLES OF OBJ ARRS
+	<# 	
+	$UnitObjs | Select-Object @(
+		"dataType",
+		"side",
+		"type",
+		@{n = "description"; e = { $_.Attributes.description } },
+		@{n = "init"; e = { $_.Attributes.init } }
+	)
 	$ObjectObjs | Select-Object @(
 		"dataType",
 		"type",
@@ -420,7 +456,7 @@ function Out-Mission {
 	$LogicObjs | Select-Object dataType, name, presenceCondition, type | Out-GridView
 	$TriggerObjs | Select-Object dataType, @{n = "name"; e = { $_.Attributes.name } } | Out-GridView
 	$CommentObjs | Select-Object dataType, description | Out-GridView
-
+#>
 
 
 	# $MissionName = ($FilePathMission -split '\\')[-1]
@@ -516,7 +552,8 @@ function Out-Mission {
 			"Severity" = Show-ResultAsTextBar $t
 		}
 	}
- #>
+	#>
+
 	function Get-WeatherSetting ([String] $SettingName, [String] $SettingNameRaw) {
 		
 		$value = [Math]::Floor($SQMJson.Mission.Intel.$SettingNameRaw * 100)
@@ -557,10 +594,13 @@ function Out-Mission {
 	# [void] $Weather.Add((Get-WeatherSetting 'Rain Start' 'startRain[\s]*='))
 	[void] $WeatherStart.Add((Get-WeatherSetting 'Rain Start' 'startRain'))
 
-	# Rain Start
-	# startRain
+	# Rain Forced
+	# rainForced
 	# [void] $Weather.Add((Get-WeatherSetting 'Rain Start' 'startRain[\s]*='))
-	[void] $WeatherStart.Add((Get-WeatherSetting 'Rain Forced?' 'rainForced'))
+	[void] $WeatherStart.Add([PSCustomObject] @{
+		"Setting" = "Rain Forced?";
+		"Severity" = [Boolean] $SQMJson.Mission.Intel.rainForced;
+	})
 	
 	# Waves Start
 	# startWaves
@@ -630,7 +670,7 @@ function Out-Mission {
 
 	###### UNIT PARSING ######
 
-	$CharlieGolfStdNames = @(
+	$CharlieStdNames = @(
 		'MAT Team Leader',
 		'Team Leader',
 		'Missile Specialist',
@@ -643,21 +683,50 @@ function Out-Mission {
 		'Vehicle Platoon Medic',
 		'Vehicle Crewman'
 	)
-	$CharlieGolfSpecialNames = @(
-		'Missile Specialist',
+	$GolfHotelSpecialNames = @(
 		'Vehicle Platoon Leader',
-		'Vehicle Commander'
+		'Vehicle Commander',
+		'Air Detachment Leader',
+		'Pilot'
 	)
-	$CharlieGolfGroupNames = @(
-		'Charlie 2',
+	$GolfHotelGroupNames = @(
 		'Golf',
 		'Golf 1',
 		'Golf 2',
 		'Golf 3',
-		'Golf 4'
+		'Golf 4',
+		'Hotel',
+		'Hotel 1',
+		'Hotel 2',
+		'Hotel 3',
+		'Hotel 4'
+	)
+	$AllRifleGroupNames = @(
+		'Company Command',
+		'Company Recon',
+		'1st Platoon',
+		'Alpha',
+		'Alpha 1',
+		'Alpha 2',
+		'Bravo',
+		'Bravo 1',
+		'Bravo 2',
+		'Charlie',
+		'Charlie 1',
+		'2nd Platoon',
+		'Delta',
+		'Delta 1',
+		'Delta 2',
+		'Echo',
+		'Echo 1',
+		'Echo 2',
+		'Foxtrot',
+		'Foxtrot 1',
+		'Foxtrot 2'
 	)
 
 	# Get all units present in the mission & format in role/group (or Spectator)
+	<# 
 	[System.Collections.ArrayList] $AllUnits = @()
 	[String[]] $AllUnitsRaw = $FileContentSQM | Select-String -Pattern 'description[\s]*=' | Select-Object -ExpandProperty Line
 	ForEach ($Unit in $AllUnitsRaw) {
@@ -677,24 +746,33 @@ function Out-Mission {
 			}
 		}
 	}
+	#>
 
-	# Check to make sure non-default unit descriptions exist in C2 and G groups and if they exist, make sure all are completed
-	[System.Collections.ArrayList] $LabeledSpecialUnits = $AllUnits | Where-Object { $_.UnitDesc -notin $CharlieGolfStdNames -and $_.Group -in $CharlieGolfGroupNames } | Sort-Object Group, UnitDesc | Select-Object Group, UnitDesc
+	# Check to make sure non-default unit descriptions exist in C2/G/H groups and if they exist, make sure all are completed
+	# [System.Collections.ArrayList] $LabeledSpecialUnitsGolfHotel = $AllUnits | Where-Object { $_.UnitDesc -notin $CharlieGolfStdNames -and $_.Group -in $GolfHotelGroupNames } | Sort-Object Group, UnitDesc | Select-Object Group, UnitDesc
+	$LabeledSpecialUnitsGolfHotel = $UnitObjs | Where-Object { $_.groupName -notin $AllRifleGroupNames -and $_.groupName -notin $GolfHotelGroupNames -and $_.unitName -in $GolfHotelSpecialNames } | Sort-Object side, groupName | Select-Object side, groupName, unitName
+	$LabeledSpecialUnitsCharlie = $UnitObjs | Where-Object { $_.groupName -notin $AllRifleGroupNames -and $_.groupName -ne 'Charlie 2' -and $_.unitName -eq 'Missile Specialist' } | Sort-Object side, groupName | Select-Object side, groupName, unitName
 
-	[System.Collections.ArrayList] $NonLabeledSpecialUnits = @()
-	ForEach ($Name in $CharlieGolfSpecialNames) {
-		[Array] $t = $AllUnits | Where-Object { $_.UnitDesc -match $Name -and $_.UnitDesc -notmatch 'Asst.' -and $_.Group -in $CharlieGolfGroupNames } | Select-Object Group, UnitDesc
-		[PSCustomObject] $unit = @{}
-		ForEach ($unit in $t) {
-			if (!($LabeledSpecialUnits | Where-Object { $_.UnitDesc -eq $unit.UnitDesc })) {
-				[void] $NonLabeledSpecialUnits.Add($unit)
+
+
+	# Get units where name not configured for C2/G/H
+	<# 
+		[System.Collections.ArrayList] $NonLabeledSpecialUnitsGolfHotel = @()
+		ForEach ($Name in $GolfHotelSpecialNames) {
+			[Array] $t = $AllUnits | Where-Object { $_.UnitDesc -match $Name -and $_.UnitDesc -notmatch 'Asst.' -and $_.Group -in $GolfHotelGroupNames } | Select-Object Group, UnitDesc
+			ForEach ($unit in $t) {
+				if (!($LabeledSpecialUnitsGolfHotel | Where-Object { $_.UnitDesc -eq $unit.UnitDesc })) {
+					[void] $NonLabeledSpecialUnitsGolfHotel.Add([PSCustomObject] $unit)
+				}
 			}
 		}
-	}
-	if ($NonLabeledSpecialUnits.Count -gt 1) {
-		$NonLabeledSpecialUnits = $NonLabeledSpecialUnits | Sort-Object Group, UnitDesc
-	}
-
+	#>
+	$NonLabeledSpecialUnitsGolfHotel = $UnitObjs | Where-Object {
+		$_.unitName -in $GolfHotelSpecialNames -and $_.groupName -in $GolfHotelGroupNames
+	} | Sort-Object side, groupName | Select-Object side, groupName, unitName
+	$NonLabeledSpecialUnitsCharlie = $UnitObjs | Where-Object {
+		$_.unitName -eq 'Team Leader' -and $_.groupName -eq 'Charlie 2'
+	} | Sort-Object side, groupName | Select-Object side, groupName, unitName
 
 
 
@@ -702,39 +780,40 @@ function Out-Mission {
 	# If not, skip other unit processing/messaging.
 	# If at least one has been done, check all in case something's missing.
 	$NoNamedUnits = $false
-	if (!$LabeledSpecialUnits) {
-		Write-Host -ForegroundColor Red "No properly-named C2 or GOLF units found!"
-		[void] $NeedToFix.Add("No properly-named C2 or GOLF units found!")
+	if (!$LabeledSpecialUnitsGolfHotel -and !$LabeledSpecialUnitsCharlie) {
+		Write-Host -ForegroundColor Red "No properly-named GOLF or HOTEL units found!"
+		[void] $NeedToFix.Add("No properly-named GOLF or HOTEL units found!")
 		$NoNamedUnits = $true
 	}
 
-
-	if (($LabeledSpecialUnits | Where-Object { $_.Group -eq 'Charlie 2' }).Count -lt 2 -and !$NoNamedUnits) {
+	<# 
+	if (($LabeledSpecialUnitsGolfHotel | Where-Object { $_.groupName -eq 'Charlie 2' }).Count -lt 2 -and !$NoNamedUnits) {
 		Write-Host -ForegroundColor Yellow "Missile Specialist in C2 needs role description set"
 		# [void] $NeedToFix.Add("Missile Specialist in C2 needs role description set")
 	}
-
-	if (!($LabeledSpecialUnits | Where-Object { $_.Group -eq 'Golf' }) -and !$NoNamedUnits) {
+	 #>
+	<# 
+	if (!($LabeledSpecialUnitsGolfHotel | Where-Object { $_.groupName -eq 'Golf' }) -and !$NoNamedUnits) {
 		Write-Host -ForegroundColor Yellow "Vehicle Platoon Leader in Golf Actual needs role description set if being used"
 		# [void] $NeedToFix.Add("Vehicle Platoon Leader in Golf Actual needs role description set if being used")
 	}
-	if (!($LabeledSpecialUnits | Where-Object { $_.Group -eq 'Golf 1' }) -and !$NoNamedUnits) {
+	if (!($LabeledSpecialUnitsGolfHotel | Where-Object { $_.groupName -eq 'Golf 1' }) -and !$NoNamedUnits) {
 		Write-Host -ForegroundColor Yellow "Vehicle Commander in Golf 1 needs role description set if being used"
 		# [void] $NeedToFix.Add("Vehicle Commander in Golf 1 needs role description set if being used")
 	}
-	if (!($LabeledSpecialUnits | Where-Object { $_.Group -eq 'Golf 2' }) -and !$NoNamedUnits) {
+	if (!($LabeledSpecialUnitsGolfHotel | Where-Object { $_.groupName -eq 'Golf 2' }) -and !$NoNamedUnits) {
 		Write-Host -ForegroundColor Yellow "Vehicle Commander in Golf 2 needs role description set if being used"
 		# [void] $NeedToFix.Add("Vehicle Commander in Golf 2 needs role description set if being used")
 	}
-	if (!($LabeledSpecialUnits | Where-Object { $_.Group -eq 'Golf 3' }) -and !$NoNamedUnits) {
+	if (!($LabeledSpecialUnitsGolfHotel | Where-Object { $_.groupName -eq 'Golf 3' }) -and !$NoNamedUnits) {
 		Write-Host -ForegroundColor Yellow "Vehicle Commander in Golf 3 needs role description set if being used"
 		# [void] $NeedToFix.Add("Vehicle Commander in Golf 3 needs role description set if being used")
 	}
-	if (!($LabeledSpecialUnits | Where-Object { $_.Group -eq 'Golf 4' }) -and !$NoNamedUnits) {
+	if (!($LabeledSpecialUnitsGolfHotel | Where-Object { $_.groupName -eq 'Golf 4' }) -and !$NoNamedUnits) {
 		Write-Host -ForegroundColor Yellow "Vehicle Commander in Golf 4 needs role description set if being used"
 		# [void] $NeedToFix.Add("Vehicle Commander in Golf 4 needs role description set if being used")
 	}
-
+	#>
 
 
 
@@ -1298,6 +1377,8 @@ if ($AllUnknowns.count -gt 1) {
 			<br><br>
 
 
+			<h2>Name and Description</h2>
+
 			$(if ($MissionNameNeedsFixed) {
 				Write-Output '<button class="accordion issuebg">Mission Name</button>'
 				'<div class="panel">
@@ -1330,36 +1411,136 @@ if ($AllUnknowns.count -gt 1) {
 			})
 
 
+
+			<h2>Units and Assets</h2>
+
+
 			$(if ($NoNamedUnits) {
-			Write-Output '<button class="accordion" style="background-color:#990000">Charlie / Golf Unit Role
+			Write-Output '<button class="accordion" style="background-color:#990000">Charlie / Golf / Hotel Unit Role
 				Descriptions</button>'
-			} elseif ($NonLabeledSpecialUnits) {
-			Write-Output '<button class="accordion issuebg">Charlie / Golf Unit Role
+			} elseif (($NonLabeledSpecialUnitsGolfHotel -and ($null -ne ($UnitObjs | Where-Object {$_.groupName -match 'Hotel' -or $_.groupName -match 'Golf'}))) -or !$NonLabeledSpecialUnitsCharlie) {
+			Write-Output '<button class="accordion issuebg">Charlie / Golf / Hotel Unit Role
 				Descriptions</button>'
-			} else {
-			Write-Output '<button class="accordion goodbg">Charlie / Golf Unit Role
+			} elseif ((!$NonLabeledSpecialUnitsGolfHotel -and !($UnitObjs | Where-Object {$_.groupName -match 'Hotel' -or $_.groupName -match 'Golf'})) -and !$NonLabeledSpecialUnitsCharlie) {
+			Write-Output '<button class="accordion goodbg">Charlie / Golf / Hotel Unit Role
 				Descriptions</button>'
 			})
 			<div class="panel">
-				<h3>Labeled Special Units</h3>
-				$($LabeledSpecialUnits | ConvertTo-Html -Fragment)
 
-				$(if ($NonLabeledSpecialUnits) {
-				Write-Output "<h3 class=issuetxt>Unlabeled Special Units</h3>"
-				Write-Output "<table>"
+			$(if ($NonLabeledSpecialUnitsCharlie) {
+				Write-Output "<h3 class=issuetxt>Unlabeled Charlie 2 Units</h3>"
+					Write-Output "<table>"
 					Write-Output "<tr>
-						<th>Group</th>
-						<th>UnitDesc</th>
+						<th>side</th>
+						<th>groupName</th>
+						<th>unitName</th>
+						<th>init</th>
 					</tr>"
-					ForEach ($Row in $NonLabeledSpecialUnits) {
+				if ($NonLabeledSpecialUnitsCharlie.Count -eq 1) {
 					Write-Output "<tr class=issuebg>
-						<td>$($Row.Group)</td>
-						<td>$($Row.UnitDesc)</td>"
-						}
-						Write-Output "</table>"
-				})
+						<td>$($NonLabeledSpecialUnitsCharlie.side)</td>
+						<td>$($NonLabeledSpecialUnitsCharlie.groupName)</td>
+						<td>$($NonLabeledSpecialUnitsCharlie.unitName)</td>
+						<td>$($NonLabeledSpecialUnitsCharlie.init)</td>"
+					Write-Output "</table>"
+				} else {
+					ForEach ($Row in $NonLabeledSpecialUnitsCharlie) {
+						Write-Output "<tr class=issuebg>
+							<td>$($Row.side)</td>
+							<td>$($Row.groupName)</td>
+							<td>$($Row.unitName)</td>
+							<td>$($Row.init)</td>"
+					}
+				}
+				Write-Output "</table>"
+			})
+
+			$(if ($NonLabeledSpecialUnitsGolfHotel) {
+				Write-Output "<h3 class=issuetxt>Unlabeled Charlie 2 Units</h3>"
+					Write-Output "<table>"
+					Write-Output "<tr>
+						<th>side</th>
+						<th>groupName</th>
+						<th>unitName</th>
+						<th>init</th>
+					</tr>"
+				if ($NonLabeledSpecialUnitsGolfHotel.Count -eq 1) {
+					Write-Output "<tr class=issuebg>
+						<td>$($NonLabeledSpecialUnitsGolfHotel.side)</td>
+						<td>$($NonLabeledSpecialUnitsGolfHotel.groupName)</td>
+						<td>$($NonLabeledSpecialUnitsGolfHotel.unitName)</td>
+						<td>$($NonLabeledSpecialUnitsGolfHotel.init)</td>"
+					Write-Output "</table>"
+				} else {
+					ForEach ($Row in $NonLabeledSpecialUnitsGolfHotel) {
+						Write-Output "<tr class=issuebg>
+							<td>$($Row.side)</td>
+							<td>$($Row.groupName)</td>
+							<td>$($Row.unitName)</td>
+							<td>$($Row.init)</td>"
+					}
+				}
+				Write-Output "</table>"
+			})
+
+				<h3>Labeled Special Units</h3>
+				<h4>Charlie 2</h4>
+				$($LabeledSpecialUnitsCharlie | ConvertTo-Html -Fragment)
+				<h4>Golf / Hotel</h4>
+				$($LabeledSpecialUnitsGolfHotel | ConvertTo-Html -Fragment)
+
+				
 
 			</div>
+
+
+			$(if ($AllVehiclesEmpty) {
+					Write-Output '<button class="accordion issuebg">Vehicle Inventories Empty</button>'
+					Write-Output '<div class="panel">
+					<p>One or more vehicle inventories are not empty.</p><br>'
+					$VehicleInvLinesNotEmpty | Select-Object "Inventory Init" | ConvertTo-Html -Fragment
+					Write-Output '</div>'
+				} else {
+					Write-Output '<button class="accordion goodbg">Vehicle Inventories Empty</button>'
+					Write-Output '<div class="panel">
+						<p>All vehicle inventories are empty.</p>
+					</div>'
+			})
+
+
+
+			$(
+				
+				Write-Output "<button class='accordion'>Vehicles ($($AllVehicles.Count))</button>"
+			)
+			<div class="panel">
+				<h3>BLUFOR</h3>
+				$($AllVehiclesGroupedBLUFOR | ConvertTo-Html -Fragment)
+				<h3>OPFOR</h3>
+				$($AllVehiclesGroupedOPFOR | ConvertTo-Html -Fragment)
+				<h3>Independent</h3>
+				$($AllVehiclesGroupedIndependent | ConvertTo-Html -Fragment)
+				<h3>Civilian</h3>
+				$($AllVehiclesGroupedCivilian | ConvertTo-Html -Fragment)
+
+			</div>
+
+
+			$(
+				Write-Output "<button class='accordion'>Soldiers ($($AllInfantry.Count))</button>"
+			)
+			<div class="panel">
+
+				$($AllInfantryGrouped | ConvertTo-Html -Fragment)
+
+
+			</div>
+
+
+
+
+
+			<h2>Required Logic Objects</h2>
 
 			$(if ($ZeusCount -lt 1 -or $SpectatorCount -lt 6) {
 			Write-Output '<button class="accordion issuebg">Required Objects</button>'
@@ -1403,80 +1584,18 @@ if ($AllUnknowns.count -gt 1) {
 			$(if ($CoreMechanicObjects.Count -lt 15) {
 			Write-Output '<button class="accordion issuebg">Core Mechanics Objects</button>'
 			Write-Output "<div class='panel'>
-				<p>Some of the framework's objective objects have been deleted.</p><br>"
+				<p>Some of the framework's logic objects have been deleted.</p><br>"
 				$CoreMechanicObjects | ConvertTo-Html -Fragment
 				Write-Output '
 			</div>'
 			} else {
 			Write-Output '<button class="accordion goodbg">Core Mechanics Objects</button>'
 			Write-Output "<div class='panel'>
-				<p>All framework objective objects are intact.</p><br>"
+				<p>All framework logic objects are intact.</p><br>"
 				$CoreMechanicObjects | ConvertTo-Html -Fragment
 				Write-Output '
 			</div>'
 			})
-
-
-
-
-			$(if ($AllVehiclesEmpty) {
-			Write-Output '<button class="accordion issuebg">Vehicle Inventories Empty</button>'
-			Write-Output '<div class="panel">
-				<p>One or more vehicle inventories are not empty.</p><br>'
-				$VehicleInvLinesNotEmpty | Select-Object "Inventory Init" | ConvertTo-Html -Fragment
-				Write-Output '
-			</div>'
-			} else {
-			Write-Output '<button class="accordion goodbg">Vehicle Inventories Empty</button>'
-			Write-Output '<div class="panel">
-				<p>All vehicle inventories are empty.</p>
-			</div>'
-			})
-
-
-
-			$(if ($NonEmptyInits) {
-			Write-Output '<button class="accordion">Init Scripts</button>'
-			Write-Output '<div class="panel" id=initscripts>'
-			Write-Output '<table>'
-			ForEach ($script in $NonEmptyInits) {
-					Write-Output "<tr><td>$($script.InitScript -join ";<br>")</td></tr>"
-				}
-			Write-Output '</table>'
-			Write-Output '</div>'
-			})
-
-
-
-
-			$(
-				
-				Write-Output "<button class='accordion'>Vehicles ($($AllVehicles.Count))</button>"
-			)
-			<div class="panel">
-				<h3>BLUFOR</h3>
-				$($AllVehiclesGroupedBLUFOR | ConvertTo-Html -Fragment)
-				<h3>OPFOR</h3>
-				$($AllVehiclesGroupedOPFOR | ConvertTo-Html -Fragment)
-				<h3>Independent</h3>
-				$($AllVehiclesGroupedIndependent | ConvertTo-Html -Fragment)
-				<h3>Civilian</h3>
-				$($AllVehiclesGroupedCivilian | ConvertTo-Html -Fragment)
-
-			</div>
-
-
-			$(
-				Write-Output "<button class='accordion'>Soldiers ($($AllInfantry.Count))</button>"
-			)
-			<div class="panel">
-
-				$($AllInfantryGrouped | ConvertTo-Html -Fragment)
-
-
-			</div>
-
-
 
 
 			$(
@@ -1498,6 +1617,24 @@ if ($AllUnknowns.count -gt 1) {
 
 
 			</div>
+
+
+
+
+
+			<h2>Other Information</h2>
+
+
+			$(if ($NonEmptyInits) {
+			Write-Output '<button class="accordion">Init Scripts</button>'
+			Write-Output '<div class="panel" id=initscripts>'
+			Write-Output '<table>'
+			ForEach ($script in $NonEmptyInits) {
+					Write-Output "<tr><td>$($script.InitScript -join ";<br>")</td></tr>"
+				}
+			Write-Output '</table>'
+			Write-Output '</div>'
+			})
 
 
 
