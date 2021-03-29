@@ -29,3 +29,8 @@ Left-click to select the AnalyzeSQM script in Windows Explorer, then right-click
 1. The script will generate an index page.
 1. You'll be prompted to choose a mission up to 6 times. Upon each selection, the `Single` mode will be run to analyze the mission, with cross-reference links added to each page to enable a browseable site. *To exit early, press Ctrl-C.*
 1. The batch of generated .html files can be placed in a web directory for publication.
+
+
+## Output
+
+The result will be one or more .html files written to the project's directory which can be opened with any browser.

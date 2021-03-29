@@ -326,7 +326,12 @@ function Out-Mission {
 	$FileContentSQM = (Get-Content $FilePathSQM).Trim()
 	$FileContentConfig = (Get-Content $FilePathConfig).Trim()
 
+	# Write as UTF8 No BOM
+	[System.IO.File]::WriteAllLines(
+				$FilePathSQM,
+				(Get-Content $FilePathSQM | Out-String))
 
+	
 	# Remove prefix added by Mikero's derapping tools
 	$VersionLine = Get-Content $FilePathSQM | Select-String -Pattern '^version[\s]{0,1}=[\s]{0,1}[\d]{1,3};$' | Select-Object -ExpandProperty Line
 	if ($VersionLine) {
@@ -1026,9 +1031,9 @@ function Out-Mission {
 
 	######### VEHICLES AND INFANTRY ##########
 
-	[System.Collections.ArrayList] $AllUsableVehicles = @()
-	[System.Collections.ArrayList] $AllLockedVehicles = @()
-	[System.Collections.ArrayList] $AllStructures = @()
+	[Array] $AllUsableVehicles = @()
+	[Array] $AllLockedVehicles = @()
+	[Array] $AllStructures = @()
 	ForEach ($Vehicle in $ObjectObjs) {
 		$assetsDbCheck = Invoke-SqliteQuery -DataSource ".\fnfCfgExportDB.db" -Query "SELECT Classname, Side, Category, Subcategory, Displayname, Weapons from assets where assets.ClassName='$($Vehicle.type) '"
 		$emptyDbCheck = Invoke-SqliteQuery -DataSource ".\fnfCfgExportDB.db" -Query "SELECT Classname, Side, Category, Subcategory, Displayname from cfgVehiclesEmpty where ClassName='$($Vehicle.type) '"
@@ -1058,7 +1063,7 @@ function Out-Mission {
 			} -Force
 			
 			if ($Vehicle.Lock -ne 'LOCKED') {
-				[void] $AllUsableVehicles.Add(($Vehicle | Select-Object @(
+				$AllUsableVehicles += $Vehicle | Select-Object @(
 							"Side",
 							"Category",
 							"Subcategory",
@@ -1070,9 +1075,9 @@ function Out-Mission {
 							"Fuel",
 							"Ammo",
 							"Init"
-						)))
+						)
 			} else {			
-				[void] $AllLockedVehicles.Add(($Vehicle | Select-Object @(
+				$AllLockedVehicles += $Vehicle | Select-Object @(
 							"Side",
 							"Category",
 							"Subcategory",
@@ -1084,57 +1089,85 @@ function Out-Mission {
 							"Fuel",
 							"Ammo",
 							"Init"
-						)))
+						)
 			}
+		}
+
+		if ($emptyDbCheck) {
+			$emptyDbCheck | Add-Member -NotePropertyMembers @{"name" = $vehicle.name}
+			$AllStructures += $emptyDbCheck | Select-Object @(
+				"Side",
+				"Category",
+				"Subcategory",
+				"DisplayName",
+				"Name",
+				"ClassName"
+			)
 		}
 	}
 
 	$AllUsableVehicles = $AllUsableVehicles | Sort-Object Side, Category, Subcategory, DisplayName
 	$AllLockedVehicles = $AllLockedVehicles | Sort-Object Side, Category, Subcategory, DisplayName
+	$AllStructures = $AllStructures  | Sort-Object Side, Category, Subcategory, DisplayName, Name
 
-	$AllUsableVehiclesGroupedRaw = $AllUsableVehicles | Group-Object -Property DisplayName, Init
+	$AllUsableVehiclesGroupedRaw = $AllUsableVehicles | Group-Object -Property Type, Init, Textures
 	[System.Collections.ArrayList] $AllUsableVehiclesGrouped = @()
 	ForEach ($GroupObj in $AllUsableVehiclesGroupedRaw) {
 		[void] $AllUsableVehiclesGrouped.Add((
 				[PSCustomObject]@{
-					"Side"        = $GroupObj.Group[0]."Side"
-					"Category"    = $GroupObj.Group[0]."Category"
-					"Subcategory" = $GroupObj.Group[0]."Subcategory"
-					"Count"       = $GroupObj.Count
-					"DisplayName" = $GroupObj.Group[0]."DisplayName"
-					"Weapons"     = $GroupObj.Group[0]."Weapons" -join ",`n"
-					"Init"        = $GroupObj.Group[0]."Init"
-					"Type"        = $GroupObj.Group[0]."Type"
-					"Textures"    = $GroupObj.Group[0]."Textures"
-					"Lock"        = $GroupObj.Group[0]."Lock"
-					"Fuel"        = $GroupObj.Group[0]."Fuel"
-					"Ammo"        = $GroupObj.Group[0]."Ammo"
+					"Side"        = $GroupObj.Group[0]."Side";
+					"Category"    = $GroupObj.Group[0]."Category";
+					"Subcategory" = $GroupObj.Group[0]."Subcategory";
+					"Count"       = $GroupObj.Count;
+					"DisplayName" = $GroupObj.Group[0]."DisplayName";
+					"Weapons"     = $GroupObj.Group[0]."Weapons" -join ",`n";
+					"Init"        = $GroupObj.Group[0]."Init";
+					"Type"        = $GroupObj.Group[0]."Type";
+					"Textures"    = $GroupObj.Group[0]."Textures";
+					"Lock"        = $GroupObj.Group[0]."Lock";
+					"Fuel"        = $GroupObj.Group[0]."Fuel";
+					"Ammo"        = $GroupObj.Group[0]."Ammo";
 				}
 			))
 	}
 
-	$AllLockedVehiclesGroupedRaw = $AllLockedVehicles | Group-Object -Property DisplayName, Init
+	$AllLockedVehiclesGroupedRaw = $AllLockedVehicles | Group-Object -Property Type, Init, Textures
 	[System.Collections.ArrayList] $AllLockedVehiclesGrouped = @()
 	ForEach ($GroupObj in $AllLockedVehiclesGroupedRaw) {
 		[void] $AllLockedVehiclesGrouped.Add((
 				[PSCustomObject]@{
-					"Side"        = $GroupObj.Group[0]."Side"
-					"Category"    = $GroupObj.Group[0]."Category"
-					"Subcategory" = $GroupObj.Group[0]."Subcategory"
-					"Count"       = $GroupObj.Count
-					"DisplayName" = $GroupObj.Group[0]."DisplayName"
-					"Weapons"     = $GroupObj.Group[0]."Weapons" -join ",`n"
-					"Init"        = $GroupObj.Group[0]."Init"
-					"Type"        = $GroupObj.Group[0]."Type"
-					"Textures"    = $GroupObj.Group[0]."Textures"
-					"Lock"        = $GroupObj.Group[0]."Lock"
-					"Fuel"        = $GroupObj.Group[0]."Fuel"
-					"Ammo"        = $GroupObj.Group[0]."Ammo"
+					"Side"        = $GroupObj.Group[0]."Side";
+					"Category"    = $GroupObj.Group[0]."Category";
+					"Subcategory" = $GroupObj.Group[0]."Subcategory";
+					"Count"       = $GroupObj.Count;
+					"DisplayName" = $GroupObj.Group[0]."DisplayName";
+					"Weapons"     = $GroupObj.Group[0]."Weapons" -join ",`n";
+					"Init"        = $GroupObj.Group[0]."Init";
+					"Type"        = $GroupObj.Group[0]."Type";
+					"Textures"    = $GroupObj.Group[0]."Textures";
+					"Lock"        = $GroupObj.Group[0]."Lock";
+					"Fuel"        = $GroupObj.Group[0]."Fuel";
+					"Ammo"        = $GroupObj.Group[0]."Ammo";
 				}
 			))
 	}
 
 
+	$AllStructuresGroupedRaw = $AllStructures | Group-Object -Property ClassName, Name
+	[System.Collections.ArrayList] $AllStructuresGrouped = @()
+	ForEach ($GroupObj in $AllStructuresGroupedRaw) {
+		[void] $AllStructuresGrouped.Add((
+				[PSCustomObject]@{
+					"Side"        = $GroupObj.Group[0]."Side";
+					"Category"    = $GroupObj.Group[0]."Category";
+					"Subcategory" = $GroupObj.Group[0]."Subcategory";
+					"Count"       = $GroupObj.Count;
+					"DisplayName" = $GroupObj.Group[0]."DisplayName";
+					"Name"        = $GroupObj.Group[0]."Name";
+					"ClassName"   = $GroupObj.Group[0]."ClassName";
+				}
+			))
+	}
 
 	<# 
 	[System.Collections.ArrayList] $AllObjectsRaw = @()
@@ -1743,12 +1776,9 @@ function Out-Mission {
 			Write-Output "<button class='accordion issuebg'>Required Game Objects (Missing $($MissingCoreMechanicsObjs.count))</button>"
 			Write-Output '<div class="panel">'
 			Write-Output '<h3 class=issuetxt>Missing Game Objects</h3>'
-			Write-Output '<p>The following missing items can be ignored:</p>'
-			Write-Output '
-			<ul>
-				<li>Safe Start markers for non-playing factions</li>
-				<li>Terminal 3 in 2-terminal game modes</li>
-			</ul>
+			Write-Output '<h4>The following missing items can be ignored:</h4>'
+			Write-Output '<p>Safe Start markers for non-playing factions</p>
+				<p>Terminal 3 in 2-terminal game modes</p>
 			'
 
 				$($MissingCoreMechanicsObjs | ConvertTo-Html -Fragment)
@@ -1820,11 +1850,11 @@ function Out-Mission {
 
 
 			$(
-				Write-Output "<button class='accordion'>Structures and Decorations ($(($AllObjects  | Where-Object {$_.Side -ne 'Modules '}).Count))</button>"
+				Write-Output "<button class='accordion'>Structures and Decorations ($($AllStructures.Count))</button>"
 			)
 			<div class="panel">
 
-				$($AllObjectsGrouped | Where-Object {$_.Side -ne 'Modules '} | ConvertTo-Html -Fragment)
+				$($AllStructuresGrouped | ConvertTo-Html -Fragment)
 			</div>
 
 
