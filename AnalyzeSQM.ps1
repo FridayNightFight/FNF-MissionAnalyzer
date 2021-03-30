@@ -1819,17 +1819,6 @@ function Out-Mission {
 			</div>
 
 
-			$(
-				Write-Output "<button class='accordion'>Custom Map Markers ($(($ObjectObjs | Where-Object { $_.type -match '^loc'}).Count))</button>"
-			)
-			<div class="panel">
-
-				$($ObjectObjs | Where-Object { $_.type -match '^loc'} | ConvertTo-Html -Fragment)
-
-
-			</div>
-
-
 
 
 
