@@ -328,8 +328,8 @@ function Out-Mission {
 
 	# Write as UTF8 No BOM
 	[System.IO.File]::WriteAllLines(
-				$FilePathSQM,
-				(Get-Content $FilePathSQM | Out-String))
+		$FilePathSQM,
+		(Get-Content $FilePathSQM | Out-String))
 
 	
 	# Remove prefix added by Mikero's derapping tools
@@ -406,6 +406,34 @@ function Out-Mission {
 			"Comment" { $CommentObjs += $Item.value }
 		}
 	}
+
+	[Hashtable] $LayerEntitiesHash = @{}
+	ForEach ($Layer in $LayerObjs.Entities) {
+		foreach ( $property in $Layer.psobject.properties.name) {
+			if ($LayerEntitiesHash[$property]) {
+				$LayerEntitiesHash[$property] += $Layer.$property
+			} else {
+				$LayerEntitiesHash[$property] = @($Layer.$property)
+			}
+		}
+	}
+
+	ForEach ($Item in $LayerEntitiesHash.values) {
+		ForEach ($Obj in $Item) {
+			if (!$Obj.dataType) { continue }
+			switch ($Obj.dataType) {
+				"Group" { $GroupObjs += $Obj }
+				"Object" { $ObjectObjs += $Obj }
+				"Layer" { $LayerObjs += $Obj }
+				"Marker" { $MarkerObjs += $Obj }
+				"Logic" { $LogicObjs += $Obj }
+				"Trigger" { $TriggerObjs += $Obj }
+				"Comment" { $CommentObjs += $Obj }
+				default {}
+			}
+		}
+	}
+
 	# for each group, will grab soldier units (up to 12 per group) and put them in separate array
 	for ($i = 0; $i -le 12; $i++) {
 		if (!$GroupObjs.Entities."Item$i") { continue }
@@ -425,6 +453,20 @@ function Out-Mission {
 		"dataType",
 		"type",
 		@{n = "name"; e = { $_.Attributes.name } },
+		@{n = "inventory"; e = {
+				[Hashtable] $CustomAttrHash = @{}
+				foreach ( $property in $_.CustomAttributes.psobject.properties.name ) {
+					$CustomAttrHash[$property] = $_.CustomAttributes.$property
+				}
+				# [Hashtable] $CustomAttrHash = @{}
+				# foreach ( $property in $SQMEntitiesHash.item122.CustomAttributes.psobject.properties.name ) {
+				# 	$CustomAttrHash[$property] = $SQMEntitiesHash.item122.CustomAttributes.$property
+				# }
+				$CustomAttrHash.values.ForEach( {
+						if ($_.property -eq 'ammoBox') { return $_.value.data.value }
+					})
+				return ""
+		} },
 		@{n = "lock"; e = { $_.Attributes.lock } },
 		@{n = "fuel"; e = { $_.Attributes.fuel } },
 		@{n = "ammo"; e = { $_.Attributes.ammo } },
@@ -838,12 +880,14 @@ function Out-Mission {
 		'phx_sec3',
 		'ctf_attackTrig'
 	)
-	ForEach ($name in $ReqTriggerNames) {
-		if (!$TriggerObjs.name.Contains($name)) {
-			$MissingCoreMechanicsObjs += [PSCustomObject]@{
-				'type'        = 'Trigger';
-				'name'        = $name;
-				'defaultType' = 'Trigger (Empty Detector)';
+	if ($TriggerObjs.name) {
+		ForEach ($name in $ReqTriggerNames) {
+			if (!$TriggerObjs.name.Contains($name)) {
+				$MissingCoreMechanicsObjs += [PSCustomObject]@{
+					'type'        = 'Trigger';
+					'name'        = $name;
+					'defaultType' = 'Trigger (Empty Detector)';
+				}
 			}
 		}
 	}
@@ -855,12 +899,14 @@ function Out-Mission {
 		'opforSafeMarker',
 		'indforSafeMarker'
 	)
-	ForEach ($name in $ReqCoreMarkers) {
-		if (!$MarkerObjs.name.Contains($name)) {
-			$MissingCoreMechanicsObjs += [PSCustomObject]@{
-				'type'        = 'Marker';
-				'name'        = $name;
-				'defaultType' = '';
+	if ($MarkObjs.name) {
+		ForEach ($name in $ReqCoreMarkers) {
+			if (!$MarkerObjs.name.Contains($name)) {
+				$MissingCoreMechanicsObjs += [PSCustomObject]@{
+					'type'        = 'Marker';
+					'name'        = $name;
+					'defaultType' = '';
+				}
 			}
 		}
 	}
@@ -876,7 +922,8 @@ function Out-Mission {
 		}
 	}
 
-	if (($LogicObjs | Where-Object { $_.type -eq 'ModuleCurator_F' }).count -lt 1) {
+	[Array] $ZeusCount = $LogicObjs | Where-Object { $_.type -eq 'ModuleCurator_F' }
+	if ($ZeusCount.count -lt 1) {
 		$MissingCoreMechanicsObjs += [PSCustomObject]@{
 			'type'        = 'Logic';
 			'name'        = 'Game Master Module';
@@ -893,12 +940,14 @@ function Out-Mission {
 		# @('destroy_obj3', 'Box_FIA_Ammo_F'),
 		@('ctf_flagPole', 'FlagPole_F')
 	)
-	ForEach ($obj in $ReqCoreObjs) {
-		if (!$ObjectObjs.name.Contains($obj[0])) {
-			$MissingCoreMechanicsObjs += [PSCustomObject]@{
-				'type'        = 'Object';
-				'name'        = $obj[0];
-				'defaultType' = $obj[1];
+	if ($ReqCoreObjs.name) {
+		ForEach ($obj in $ReqCoreObjs) {
+			if (!$ObjectObjs.name.Contains($obj[0])) {
+				$MissingCoreMechanicsObjs += [PSCustomObject]@{
+					'type'        = 'Object';
+					'name'        = $obj[0];
+					'defaultType' = $obj[1];
+				}
 			}
 		}
 	}
@@ -1064,37 +1113,51 @@ function Out-Mission {
 			
 			if ($Vehicle.Lock -ne 'LOCKED') {
 				$AllUsableVehicles += $Vehicle | Select-Object @(
-							"Side",
-							"Category",
-							"Subcategory",
-							"DisplayName",
-							"Type",
-							"Weapons",
-							"Textures",
-							"Lock",
-							"Fuel",
-							"Ammo",
-							"Init"
-						)
+					"Side",
+					"Category",
+					"Subcategory",
+					"DisplayName",
+					"Type",
+					"Weapons",
+					@{n="Inventory";e={
+							if ($_.Inventory -eq '[[[[],[]],[[],[]],[[],[]],[[],[]]],false]') {
+								 return "Empty"
+							} else {
+								return "Not Empty"
+							}
+					}},
+					"Textures",
+					"Lock",
+					"Fuel",
+					"Ammo",
+					"Init"
+				)
 			} else {			
 				$AllLockedVehicles += $Vehicle | Select-Object @(
-							"Side",
-							"Category",
-							"Subcategory",
-							"DisplayName",
-							"Type",
-							"Weapons",
-							"Textures",
-							"Lock",
-							"Fuel",
-							"Ammo",
-							"Init"
-						)
+					"Side",
+					"Category",
+					"Subcategory",
+					"DisplayName",
+					"Type",
+					"Weapons",
+					@{n="Inventory";e={
+							if ($_.Inventory -ne '[[[[],[]],[[],[]],[[],[]],[[],[]]],false]') {
+								 return "Empty"
+							} else {
+								return "Not Empty"
+							}
+					}},
+					"Textures",
+					"Lock",
+					"Fuel",
+					"Ammo",
+					"Init"
+				)
 			}
 		}
 
 		if ($emptyDbCheck) {
-			$emptyDbCheck | Add-Member -NotePropertyMembers @{"name" = $vehicle.name}
+			$emptyDbCheck | Add-Member -NotePropertyMembers @{"name" = $vehicle.name }
 			$AllStructures += $emptyDbCheck | Select-Object @(
 				"Side",
 				"Category",
@@ -1372,6 +1435,7 @@ function Out-Mission {
 
 
 	##### VEHICLE INVENTORY PARSING #####
+	<# 
 	[System.Collections.ArrayList] $VehicleInvLinesNotEmpty = @()
 	$VehicleInvLines = $FileContentSQM | Select-String -Pattern '^value="\[\[\[\[' | Select-Object -ExpandProperty Line
 	$EmptyInvLine = 'value="[[[[],[]],[[],[]],[[],[]],[[],[]]],false]";'
@@ -1381,14 +1445,57 @@ function Out-Mission {
 		$AllVehiclesInvEmpty = $false
 		[void] $VehicleInvLinesNotEmpty.Add([PSCustomObject]@{"Inventory Init" = $Line })
 	}
+ #>
+	[System.Collections.ArrayList] $VehicleInvLinesNotEmpty = @()
+	ForEach ($Vehicle in $AllUsableVehicles) {
+		if ($Vehicle.Inventory -eq 'Not Empty') {
+			[void]$VehicleInvLinesNotEmpty.Add(($Vehicle | Select-Object @(
+						"Side",
+						"Category",
+						"Subcategory",
+						"DisplayName",
+						"Type",
+						@{n = "Weapons"; e = { $_.Weapons -join ",`n"; } },
+						"Inventory",
+						"Textures",
+						"Lock",
+						"Fuel",
+						"Ammo",
+						"Init"
+					)))
+		}
+	}
+	ForEach ($Vehicle in $AllLockedVehicles) {
+		if ($Vehicle.Inventory -eq 'Not Empty') {
+			[void]$VehicleInvLinesNotEmpty.Add(($Vehicle | Select-Object @(
+					"Side",
+					"Category",
+					"Subcategory",
+					"DisplayName",
+					"Type",
+					@{n = "Weapons"; e = { $_.Weapons -join ",`n";}},
+					"Inventory",
+					"Textures",
+					"Lock",
+					"Fuel",
+					"Ammo",
+					"Init"
+			)))
+		}
+	}
 
+	Write-Debug ($VehicleInvLinesNotEmpty | Format-Table | Out-String)
+
+	if ($VehicleInvLinesNotEmpty -ne @()) { $AllVehiclesEmpty = $false } else { $AllVehiclesEmpty = $true }
 
 	##### INIT SCRIPTS PARSING #####
+	# Now shown on individual vehicles
+<# 	
 	$NonEmptyInits = $FileContentSQM | Select-String -Pattern '^init[\s]*=[\s]*"(.+)";' | Select-Object @{n = "Init"; e = { $_.Matches.Groups[1] } } | Where-Object { $_ -notmatch '= group this' } | ForEach-Object {
 		return [PSCustomObject]@{"InitScript" = ($_.Init -replace '""', '"' -split ';') }
 	}
 	 
-
+ #>
 
 
 
@@ -1727,11 +1834,11 @@ function Out-Mission {
 			</div>
 
 
-			$(if ($AllVehiclesEmpty) {
+			$(if (!$AllVehiclesEmpty) {
 					Write-Output '<button class="accordion issuebg">Vehicle Inventories Empty</button>'
 					Write-Output '<div class="panel">
 					<p>One or more vehicle inventories are not empty.</p><br>'
-					$VehicleInvLinesNotEmpty | Select-Object "Inventory Init" | ConvertTo-Html -Fragment
+					$VehicleInvLinesNotEmpty | ConvertTo-Html -Fragment
 					Write-Output '</div>'
 				} else {
 					Write-Output '<button class="accordion goodbg">Vehicle Inventories Empty</button>'
@@ -2105,7 +2212,7 @@ function Out-IndexFile {
 
 $ErrorActionPreference = "Inquire"
 
-$Version = Get-ChildItem -File | Where-Object {$_.Name -match '^v\d.\d.\d$'} | Select-Object -ExpandProperty Name
+$Version = Get-ChildItem -File | Where-Object { $_.Name -match '^v\d.\d.\d$' } | Select-Object -ExpandProperty Name
 
 $Host.UI.RawUI.BackgroundColor = "Black"
 $Host.UI.RawUI.ForegroundColor = "Gray"
