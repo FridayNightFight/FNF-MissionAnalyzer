@@ -506,8 +506,8 @@ function Out-Mission {
 #>
 
 
-	# $MissionName = ($FilePathMission -split '\\')[-1]
-	[String] $MissionName = $SQMJson.sourceName
+	$MissionName = ($FilePathMission -split '\\')[-1]
+	# [String] $MissionName = $SQMJson.sourceName
 
 
 
