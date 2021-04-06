@@ -466,7 +466,8 @@ function Out-Mission {
 						if ($_.property -eq 'ammoBox') { return $_.value.data.value }
 					})
 				return ""
-		} },
+			} 
+  },
 		@{n = "lock"; e = { $_.Attributes.lock } },
 		@{n = "fuel"; e = { $_.Attributes.fuel } },
 		@{n = "ammo"; e = { $_.Attributes.ammo } },
@@ -792,8 +793,8 @@ function Out-Mission {
 
 	# Check to make sure non-default unit descriptions exist in C2/G/H groups and if they exist, make sure all are completed
 	# [System.Collections.ArrayList] $LabeledSpecialUnitsGolfHotel = $AllUnits | Where-Object { $_.UnitDesc -notin $CharlieGolfStdNames -and $_.Group -in $GolfHotelGroupNames } | Sort-Object Group, UnitDesc | Select-Object Group, UnitDesc
-	$LabeledSpecialUnitsGolfHotel = $UnitObjs | Where-Object { $_.groupName -notin $AllStdRifleGroupNames -and $_.groupName -notin $GolfHotelGroupNames -and $_.unitName -in $GolfHotelSpecialNames } | Sort-Object side, groupName | Select-Object side, groupName, unitName
 	$LabeledSpecialUnitsCharlie = $UnitObjs | Where-Object { $_.groupName -notin $AllStdRifleGroupNames -and $_.unitName -in 'Team Leader', 'MAT Team Leader' } | Sort-Object side, groupName | Select-Object side, groupName, unitName
+	$LabeledSpecialUnitsGolfHotel = $UnitObjs | Where-Object { $_.groupName -notin $AllStdRifleGroupNames -and $_.groupName -notin $GolfHotelGroupNames -and $_.unitName -in $GolfHotelSpecialNames } | Sort-Object side, groupName | Select-Object side, groupName, unitName
 
 
 
@@ -809,21 +810,35 @@ function Out-Mission {
 			}
 		}
 	#>
-	$AllGolfHotelUnits = $UnitObjs | Where-Object {
-		$_.groupName -in $GolfHotelGroupNames
-	} | Sort-Object side, groupName, unitName | Select-Object side, groupName, unitName
 	$AllCharlieUnits = $UnitObjs | Where-Object {
 		$_.groupName -eq 'Charlie 2'
 	} | Sort-Object side, groupName, unitName | Select-Object side, groupName, unitName
+	$AllGolfHotelUnits = $UnitObjs | Where-Object {
+		$_.groupName -in $GolfHotelGroupNames
+	} | Sort-Object side, groupName, unitName | Select-Object side, groupName, unitName
 
 
 
+	$NonLabeledSpecialUnitsCharlie = $UnitObjs | Where-Object {
+		$_.unitName -in 'Team Leader', 'MAT Team Leader' -and $_.groupName -eq 'Charlie 2'
+	} | Sort-Object side, groupName | Select-Object side, groupName, unitName
 	$NonLabeledSpecialUnitsGolfHotel = $UnitObjs | Where-Object {
 		$_.unitName -in $GolfHotelSpecialNames -and $_.groupName -in $GolfHotelGroupNames
 	} | Sort-Object side, groupName | Select-Object side, groupName, unitName
-	$NonLabeledSpecialUnitsCharlie = $UnitObjs | Where-Object {
-		$_.unitName -match 'Team Leader' -and $_.groupName -eq 'Charlie 2'
-	} | Sort-Object side, groupName | Select-Object side, groupName, unitName
+
+	ForEach ($Unit in $NonLabeledSpecialUnitsGolfHotel) {
+		if ($LabeledSpecialUnitsGolfHotel) {
+			ForEach ($GroupName in $LabeledSpecialUnitsGolfHotel.groupName) {
+				if ($GroupName -match $Unit.GroupName) {
+					if ($LabeledSpecialUnitsGolfHotel.count -gt 1) {
+						$NonLabeledSpecialUnitsGolfHotel -= $Unit
+					} else {
+						$NonLabeledSpecialUnitsGolfHotel = $null
+					}
+				}
+			}
+		}
+	}
 
 
 
@@ -1119,13 +1134,14 @@ function Out-Mission {
 					"DisplayName",
 					"Type",
 					"Weapons",
-					@{n="Inventory";e={
+					@{n = "Inventory"; e = {
 							if ($_.Inventory -eq '[[[[],[]],[[],[]],[[],[]],[[],[]]],false]') {
-								 return "Empty"
+								return "Empty"
 							} else {
 								return "Not Empty"
 							}
-					}},
+						}
+     },
 					"Textures",
 					"Lock",
 					"Fuel",
@@ -1140,13 +1156,14 @@ function Out-Mission {
 					"DisplayName",
 					"Type",
 					"Weapons",
-					@{n="Inventory";e={
+					@{n = "Inventory"; e = {
 							if ($_.Inventory -ne '[[[[],[]],[[],[]],[[],[]],[[],[]]],false]') {
-								 return "Empty"
+								return "Empty"
 							} else {
 								return "Not Empty"
 							}
-					}},
+						}
+     },
 					"Textures",
 					"Lock",
 					"Fuel",
@@ -1448,7 +1465,7 @@ function Out-Mission {
  #>
 	[System.Collections.ArrayList] $VehicleInvLinesNotEmpty = @()
 	ForEach ($Vehicle in $AllUsableVehicles) {
-		if ($Vehicle.Inventory -eq 'Not Empty') {
+		if ($Vehicle.Inventory -eq 'Not Empty' -and $Vehicle.Subcategory -ne "Turrets") {
 			[void]$VehicleInvLinesNotEmpty.Add(($Vehicle | Select-Object @(
 						"Side",
 						"Category",
@@ -1466,21 +1483,21 @@ function Out-Mission {
 		}
 	}
 	ForEach ($Vehicle in $AllLockedVehicles) {
-		if ($Vehicle.Inventory -eq 'Not Empty') {
+		if ($Vehicle.Inventory -eq 'Not Empty' -and $Vehicle.Subcategory -ne "Turrets") {
 			[void]$VehicleInvLinesNotEmpty.Add(($Vehicle | Select-Object @(
-					"Side",
-					"Category",
-					"Subcategory",
-					"DisplayName",
-					"Type",
-					@{n = "Weapons"; e = { $_.Weapons -join ",`n";}},
-					"Inventory",
-					"Textures",
-					"Lock",
-					"Fuel",
-					"Ammo",
-					"Init"
-			)))
+						"Side",
+						"Category",
+						"Subcategory",
+						"DisplayName",
+						"Type",
+						@{n = "Weapons"; e = { $_.Weapons -join ",`n"; } },
+						"Inventory",
+						"Textures",
+						"Lock",
+						"Fuel",
+						"Ammo",
+						"Init"
+					)))
 		}
 	}
 
@@ -1490,7 +1507,7 @@ function Out-Mission {
 
 	##### INIT SCRIPTS PARSING #####
 	# Now shown on individual vehicles
-<# 	
+	<# 	
 	$NonEmptyInits = $FileContentSQM | Select-String -Pattern '^init[\s]*=[\s]*"(.+)";' | Select-Object @{n = "Init"; e = { $_.Matches.Groups[1] } } | Where-Object { $_ -notmatch '= group this' } | ForEach-Object {
 		return [PSCustomObject]@{"InitScript" = ($_.Init -replace '""', '"' -split ';') }
 	}
@@ -1757,7 +1774,7 @@ function Out-Mission {
 			$(if ($NoNamedUnits) {
 			Write-Output '<button class="accordion" style="background-color:#990000">Charlie / Golf / Hotel Unit Role
 				Descriptions</button>'
-			} elseif (!$NonLabeledSpecialUnitsGolfHotel -or !$NonLabeledSpecialUnitsCharlie -or !$LabeledSpecialUnitsGolfHotel -or !$LabeledSpecialUnitsCharlie) {
+			} elseif (!$NonLabeledSpecialUnitsGolfHotel -or !$NonLabeledSpecialUnitsCharlie) {
 			Write-Output '<button class="accordion issuebg">Charlie / Golf / Hotel Unit Role
 				Descriptions</button>'
 			} else {
@@ -1818,16 +1835,46 @@ function Out-Mission {
 
 				<h3>Properly Labeled Special Units</h3>
 				<h4>Charlie 2</h4>
-				$($LabeledSpecialUnitsCharlie | ConvertTo-Html -Fragment)
-				<h4>Golf / Hotel</h4>
-				$($LabeledSpecialUnitsGolfHotel | ConvertTo-Html -Fragment)
+				$(
+					Write-Output "<table>"
+					Write-Output "<tr>
+						<th>side</th>
+						<th>groupName</th>
+						<th>unitName</th>
+					</tr>"
+					ForEach ($Row in $LabeledSpecialUnitsCharlie) {
+						Write-Output "<tr class=issuebg>
+							<td>$($Row.side)</td>
+							<td>$($Row.groupName)</td>
+							<td>$($Row.unitName)</td>"
+					}
+					Write-Output "</table>"
+				)
 
+				<h4>Golf / Hotel</h4>
+				$(
+					Write-Output "<table>"
+					Write-Output "<tr>
+						<th>side</th>
+						<th>groupName</th>
+						<th>unitName</th>
+					</tr>"
+					ForEach ($Row in $LabeledSpecialUnitsGolfHotel) {
+						Write-Output "<tr class=issuebg>
+							<td>$($Row.side)</td>
+							<td>$($Row.groupName)</td>
+							<td>$($Row.unitName)</td>"
+					}
+					Write-Output "</table>"
+				)
+
+				<!--
 				<h3>All Charlie Units</h3>
 				$($AllCharlieUnits | ConvertTo-Html -Fragment)
 
 				<h3>All Golf / Hotel Units</h3>
 				$($AllGolfHotelUnits | ConvertTo-Html -Fragment)
-
+				-->
 
 				
 
