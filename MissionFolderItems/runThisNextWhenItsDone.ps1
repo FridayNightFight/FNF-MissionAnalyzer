@@ -1,74 +1,68 @@
-
-
-
-
-
-
-
-
+$StartDir = [System.IO.Path]::GetDirectoryName($myInvocation.MyCommand.Definition)
 
 # Get mission config, description, etc params
-$FilePathSQM = ".\mission.sqm"
-$FilePathConfig = ".\config.sqf"
+$FilePathSQM = "$StartDir\mission.sqm"
+$FilePathConfig = "$StartDir\config.sqf"
 
 
 
 # Get file contents
-	$FileContentSQM = (Get-Content $FilePathSQM).Trim()
-	$FileContentConfig = (Get-Content $FilePathConfig).Trim()
+$FileContentSQM = (Get-Content $FilePathSQM).Trim()
+$FileContentConfig = (Get-Content $FilePathConfig).Trim()
 
-	# Write as UTF8 No BOM
-	[System.IO.File]::WriteAllLines(
-		$FilePathSQM,
-		(Get-Content $FilePathSQM | Out-String))
+# Write as UTF8 No BOM
+[System.IO.File]::WriteAllLines(
+	$FilePathSQM,
+	(Get-Content $FilePathSQM | Out-String))
 
 	
-	# Remove prefix added by Mikero's derapping tools
-	$VersionLine = Get-Content $FilePathSQM | Select-String -Pattern '^version[\s]{0,1}=[\s]{0,1}[\d]{1,3};$' | Select-Object -ExpandProperty Line
-	if ($VersionLine) {
-		$VersionLinePos = (Get-Content $FilePathSQM).IndexOf($VersionLine)
-		if ($VersionLinePos -gt 0) {
-			# Write as UTF8 No BOM
-			[System.IO.File]::WriteAllLines(
-				$FilePathSQM,
-				((Get-Content $FilePathSQM)[$VersionLinePos..$FileContentSQM.Length] | Out-String))
-		}
+# Remove prefix added by Mikero's derapping tools
+$VersionLine = Get-Content $FilePathSQM | Select-String -Pattern '^version[\s]{0,1}=[\s]{0,1}[\d]{1,3};$' | Select-Object -ExpandProperty Line
+if ($VersionLine) {
+	$VersionLinePos = (Get-Content $FilePathSQM).IndexOf($VersionLine)
+	if ($VersionLinePos -gt 0) {
+		# Write as UTF8 No BOM
+		[System.IO.File]::WriteAllLines(
+			$FilePathSQM,
+			((Get-Content $FilePathSQM)[$VersionLinePos..$FileContentSQM.Length] | Out-String))
 	}
+}
 
-	# Make sure python is installed
-	try {
-		$PyVer = python -V
-		$PyVer = [Regex]::Matches($PyVer, '(\d).(\d).(\d)')
-		if ($PyVer.Groups[1].Value -lt 3 -or ($Pyver.Groups[1].Value -eq 3 -and $PyVer.Groups[2].Value -lt 4)) {
-			Write-Warning "Python version is $(python -V), less than the required 3.4+."
-			Pause
-			exit
-		}
-	} catch {
-		Write-Warning "Python 3.4+ not installed, exiting..."
+# Make sure python is installed
+try {
+	$PyVer = python -V
+	$PyVer = [Regex]::Matches($PyVer, '(\d).(\d).(\d)')
+	if ($PyVer.Groups[1].Value -lt 3 -or ($Pyver.Groups[1].Value -eq 3 -and $PyVer.Groups[2].Value -lt 4)) {
+		Write-Warning "Python version is $(python -V), less than the required 3.4+."
 		Pause
 		exit
 	}
-	# run python parser utility
-	if ($null -ne (pip show armaclass)) {
-		Write-Debug "armaclass package already installed"
-	} else {
-		pip install armaclass
-	}
+} catch {
+	Write-Warning "Python 3.4+ not installed, exiting..."
+	Pause
+	exit
+}
+# run python parser utility
+if ($null -ne (pip show armaclass)) {
+	Write-Debug "armaclass package already installed"
+} else {
+	pip install armaclass
+}
 
-	python parseSqm.py $FilePathSQM
-	if ($LASTEXITCODE -ne 0) {
-		Write-Host -ForegroundColor Red "Failed to parse the SQM file. Please ensure it hasn't been manually modified and is unbinarized."
-		Pause
-		exit
-	}
-
-
+python parseSqm.py $FilePathSQM
+if ($LASTEXITCODE -ne 0) {
+	Write-Warning "Failed to parse the SQM file. Please ensure it hasn't been manually modified and is unbinarized. You will not see the lobby text on the summary page until this is done."
+	Pause
+} else {
 	$SQMJson = Get-Content ".\sqmjson.txt" | ConvertFrom-Json
 	Start-Sleep 1
 	Remove-Item ".\sqmjson.txt" -Force
 
 	[String] $LobbyText = $SQMJson.Mission.Intel.overviewText
+}
+
+
+	
 
 
 
@@ -242,12 +236,7 @@ Get-ChildItem -File -Filter "debug_console_x64_*.txt" | ForEach-Object Name | Re
 
 # Output to webpage
 
-if (!(Get-Module -Name PSHTML -ListAvailable)) {
-	Install-Module PSHTML -Scope CurrentUser -Confirm:$False
-}
-
-##### HTML OUTPUT #####
-$HTMLOut = @"
+@"
 <!DOCTYPE html>
 <html>
 
@@ -433,6 +422,18 @@ $HTMLOut = @"
 
 			<h2>Mission Description</h2>
 			<h3 id=missiondesc style="font-family:monospace">$($LobbyText)</h3>
+			<br><br>
+			
+			$(
+				Write-Output "<h2 style='color:#FFA500;'>$($MissionInfo.gameMode.ToUpper())</h2>"
+				if ($MissionInfo.gameMode -notin @("neutralSector","connection")) {
+					Write-Output "<h2>$($MissionInfo.attacker) attacking $($MissionInfo.defender)</h2>"
+				}
+				Write-Output "<h3>Players participating:</h3>"
+				$SoldiersBySide | Select-Object Name, Count | ConvertTo-Html -Fragment
+			)
+			
+			<br><br>
 
 
 			<!-- <h2>Issues to Fix</h2>
@@ -475,9 +476,6 @@ $HTMLOut = @"
 				$Weather.gusts = Show-ResultAsTextBar -ValueInPercent ([double]$Weather.gusts * 100)
 				$Weather | ConvertTo-Html -Fragment -As List
 			)
-
-			<h2>Slots by Side</h2>
-			$($SoldiersBySide | Select-Object Name, Count | ConvertTo-Html -Fragment -As List)
 
 			<br><br>
 
@@ -568,7 +566,7 @@ $HTMLOut = @"
 			)
 			<div class="panel">
 				<h3>BLUFOR</h3>
-				$($SoldiersByTypeBLU | Select Name, Count | ConvertTo-Html -Fragment)
+				$($SoldiersByTypeBLU | Select-Object Name, Count | ConvertTo-Html -Fragment)
 				<br>
 				<h3>OPFOR</h3>
 				$($SoldiersByTypeOPF | Select-Object Name, Count | ConvertTo-Html -Fragment)
@@ -711,9 +709,9 @@ $HTMLOut = @"
 	</body>
 
 </html>
-"@  | Out-File "C:\Users\indif\Downloads\test.html"
+"@  | Out-File "$StartDir\$($MissionInfo.missionName).html" -Force
 
-
+<# 
 $(
 	$MissionInfo | ConvertTo-Html -Fragment -As List
 	$Weather | ConvertTo-Html -Fragment -As List
@@ -741,3 +739,4 @@ $(
 		}
 	} | Sort-Object Locked, Side, ObjectType, Count, DisplayName | ConvertTo-Html  -Fragment
 )
+#>
