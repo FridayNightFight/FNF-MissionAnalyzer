@@ -4,8 +4,8 @@
 ## Requirements
 
 3rd Party Utilities:
-* [PSSQLite Powershell module](https://github.com/RamblingCookieMonster/PSSQLite)
-* [Armaclass](https://github.com/overfl0/Armaclass)
+* [Armaclass Python parser](https://github.com/overfl0/Armaclass)
+* [KillzoneKid Arma Debug Console extension](http://killzonekid.com/arma-console-extension-debug_console-dll-v3-0/)
 
 
 This utility uses [Armaclass](https://github.com/overfl0/Armaclass), a Python 3.4+ Arma class definition parser. You must have Python 3.4+ installed on your machine. You can find the latest stable installer [here](https://www.python.org/downloads/).
@@ -14,23 +14,22 @@ This utility has been tested on Windows Powershell 5.1. Powershell Core 6 and 7 
 
 ## Usage
 
-Left-click to select the AnalyzeSQM script in Windows Explorer, then right-click and select "Run with Powershell".
-* If a valid version of Python 3 is not detected, the script will notify you then exit.
-* The script will prompt you to install the the PSSQLite module, if not present, from the default PSGallery repository. Hit "Y" when prompted to proceed.
+**Copy the .dll files in the "debug_console extension" folder to your Arma 3 installation directory. This is used to export information from the game to a file.**
+Once you've done this, unless the directory is wiped or moved, you won't need to do it again.
 
-`Single` mode will prompt you for the full path to the mission.sqm file of the mission you wish to analyze.
-1. The mission should be in an unpacked folder format.
-1. The mission should have the FNF framework files applied.
-1. The mission file should be unbinarized. If it is binarized, you'll receive a warning and the script will exit.
+### To Process a Mission
+Copy everything in the "Contents" folder directly to the mission folder to analyze.
 
-`Multi` mode is used by the vetting team for playlist generation each week.
-1. Missions used should all meet the conditions for `Single` mode.
-1. Up to 6 mission folders should be placed in the Mission Analyzer directory.
-1. The script will generate an index page.
-1. You'll be prompted to choose a mission up to 6 times. Upon each selection, the `Single` mode will be run to analyze the mission, with cross-reference links added to each page to enable a browseable site. *To exit early, press Ctrl-C.*
-1. The batch of generated .html files can be placed in a web directory for publication.
+Load the mission in EDEN Editor, and launch as Single Player. _It's ok to be in the Splendid Camera._
 
+Press Escape to open the debug console.
+
+Open "RunThisFirst.sqf" and paste the contents into the debug console in-game. Then press `LOCAL EXEC`.
+
+The process will open a debug console as the process works. When finished, you'll see white text stating so.
+
+Next, return to the mission folder in Windows Explorer and right-click "runThisNext.ps1". Select "Run with Powershell". The first run may take a moment, as it's autolocating your Arma 3 directory. It will save this so future instances will run faster.
 
 ## Output
 
-The result will be one or more .html files written to the project's directory which can be opened with any browser.
+The Powershell script will output an HTML file to the mission folder then close. You can review the details of the mission there.
