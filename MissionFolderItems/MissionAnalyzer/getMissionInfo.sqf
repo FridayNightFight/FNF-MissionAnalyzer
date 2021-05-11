@@ -7,17 +7,19 @@ private[
     "_gameMode",
     "_defender",
     "_attacker",
+    "_indepAlliedBlu",
+    "_indepAlliedOpf",
     "_bluUniform",
     "_opfUniform",
     "_indUniform",
-    "_civUniform",
     "_bluWeapons",
     "_opfWeapons",
     "_indWeapons",
-    "_civWeapons",
     "_bluAT",
     "_opfAT",
     "_indAT",
+    "_magOptics",
+    "_addNVG",
     "_fortifyEnabled",
     "_fortifyPoints",
     "_startVisible",
@@ -32,17 +34,19 @@ _author = getMissionConfigValue "author";
 _gameMode = phx_gameMode;
 _defender = phx_defendingSide;
 _attacker = phx_attackingSide;
+_indepAlliedBlu = str([west, resistance] call BIS_fnc_sideIsFriendly) + str([resistance, west] call BIS_fnc_sideisFriendly);
+_indepAlliedOpf = str([east, resistance] call BIS_fnc_sideIsFriendly) + str([resistance, east] call BIS_fnc_sideisFriendly);
 _bluUniform = phx_bluforUniform;
 _opfUniform = phx_opforUniform;
 _indUniform = phx_indforUniform;
-_civUniform = phx_civUniform;
 _bluWeapons = phx_bluforWeapons;
 _opfWeapons = phx_opforWeapons;
 _indWeapons = phx_indforWeapons;
-_civWeapons = phx_civWeapons;
 _bluAT = phx_bluAT;
 _opfAT = phx_redAT;
 _indAT = phx_grnAT;
+_magOptics = phx_magnifiedOptics;
+_addNVG = phx_addNVG;
 _fortifyEnabled = phx_allowFortify;
 _fortifyPoints = phx_fortifyPoints;
 _startVisible = phx_enemyStartVisible;
@@ -57,17 +61,19 @@ private _output = [
     _gameMode,
     _defender,
     _attacker,
+    _indepAlliedBlu,
+    _indepAlliedOpf,
     _bluUniform,
     _opfUniform,
     _indUniform,
-    _civUniform,
     _bluWeapons,
     _opfWeapons,
     _indWeapons,
-    _civWeapons,
     _bluAT,
     _opfAT,
     _indAT,
+    _magOptics,
+    _addNVG,
     _fortifyEnabled,
     _fortifyPoints,
     _startVisible,

@@ -7,6 +7,7 @@
             "_dispName",
             "_objType",
             "_locked",
+            "_init",
             "_mod",
             "_author",
             "_cat",
@@ -32,6 +33,7 @@
         _dispName = getText(_configName >> 'displayName');
         _objType = (_x call BIS_fnc_objectType) select 1;
         _locked = locked _x;
+        _init = [_configName >> "EventHandlers", "init", ""] call BIS_fnc_returnConfigEntry;
         _mod = configSourceMod _configName;
         _author = getText(_configName >> 'author');
         _cat = getText(_configName >> 'category');
