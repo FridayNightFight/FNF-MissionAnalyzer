@@ -1,35 +1,52 @@
 # FNF-MissionAnalyzer
-*HTML Summary for FNF missions*
 
 ## Requirements
 
 3rd Party Utilities:
-* [Armaclass Python parser](https://github.com/overfl0/Armaclass)
 * [KillzoneKid Arma Debug Console extension](http://killzonekid.com/arma-console-extension-debug_console-dll-v3-0/)
 
-
-This utility uses [Armaclass](https://github.com/overfl0/Armaclass), a Python 3.4+ Arma class definition parser. You must have Python 3.4+ installed on your machine. You can find the latest stable installer [here](https://www.python.org/downloads/).
+> Note that the Python dependencies have been removed and mission.sqm is no longer directly parsed thanks to the added functionality of gathering data while in the EDEN Editor.
 
 This utility has been tested on Windows Powershell 5.1. Powershell Core 6 and 7 on Windows, Linux, and Mac machines may not behave correctly.
 
 ## Usage
 
-**Copy the .dll files in the "debug_console extension" folder to your Arma 3 installation directory. This is used to export information from the game to a file.**
+Copy the .dll files in the `debug_console extension` folder to your Arma 3 installation directory. This is used to export information from the game to a file.
+
 Once you've done this, unless the directory is wiped or moved, you won't need to do it again.
 
-### To Process a Mission
-Copy everything in the "Contents" folder directly to the mission folder to analyze.
+---
 
-Load the mission in EDEN Editor, and launch as Single Player. _It's ok to be in the Splendid Camera._
+Copy everything in the `MissionFolderItems` folder directly to the mission folder to analyze.
 
-Press Escape to open the debug console.
+Load the mission in EDEN Editor.
 
-Open "RunThisFirst.sqf" and paste the contents into the debug console in-game. Then press `LOCAL EXEC`.
+Press `CTRL+D` to open the debug console.
+Enter the desired command (reference below), then press `LOCAL EXEC`.
+
+---
+
+**++Previewing Loadouts++**
+
+To apply loadouts as configured in config.sqf on all infantry units:
+`[true] execVM 'previewFNFLoadoutsEden.sqf';`
+
+To remove loadouts and strip characters before saving mission again:
+`[false] execVM 'previewFNFLoadoutsEden.sqf';`
+
+
+**++Exporting Mission Data to HTML & JSON++**
+
+`execVM 'getMissionData.sqf';`
 
 The process will open a debug console as the process works. When finished, you'll see white text stating so.
 
-Next, return to the mission folder in Windows Explorer and right-click "runThisNext.ps1". Select "Run with Powershell". The first run may take a moment, as it's autolocating your Arma 3 directory. It will save this so future instances will run faster.
+Next, return to the mission folder in Windows Explorer and right-click `processExportedData.ps1`. Select "Run with Powershell". The first run may take a moment, as it's autolocating your Arma 3 directory. It will save this info to your user profile so future instances will run faster.
+
+---
 
 ## Output
 
-The Powershell script will output an HTML file to the mission folder then close. You can review the details of the mission there.
+The Powershell script will output HTML and JSON files to the mission folder then close. You can review the details of the mission there using a browser (HTML) or text editor (JSON).
+
+For better viewing of JSON content, check out [this Chrome/Chromium extension](https://chrome.google.com/webstore/detail/json-formatter/bcjindcccaagfpapjjmafapmmgkkhgoa?hl=en).
