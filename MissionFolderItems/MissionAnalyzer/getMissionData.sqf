@@ -1,0 +1,10 @@
+call compile preprocessFileLineNumbers "MissionAnalyzer\getMissionInfo.sqf";
+uisleep 3;
+call compile preprocessFileLineNumbers "MissionAnalyzer\getWeatherInfo.sqf";
+uisleep 3;
+call compile preprocessFileLineNumbers "MissionAnalyzer\getSoldierInfo.sqf";
+uisleep 3;
+call compile preprocessFileLineNumbers "MissionAnalyzer\getAssetInfo.sqf";
+uisleep 3;
+"debug_console" callExtension ("Data gathering complete!" + "#1111");
+"debug_console" callExtension ("X");

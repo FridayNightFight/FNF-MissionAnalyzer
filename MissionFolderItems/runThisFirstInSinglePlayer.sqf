@@ -1,0 +1,1 @@
+execVM "MissionAnalyzer\getMissionData.sqf";

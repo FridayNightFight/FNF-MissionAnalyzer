@@ -181,7 +181,6 @@ $Vehicles = Get-Content $Files[3] | ConvertFrom-Csv -Delimiter '|' -Header @(
 	"side",
 	"dlc",
 	"vc",
-	"init",
 	"weapons",
 	"ammo",
 	"cargoWep",
@@ -553,7 +552,6 @@ Get-ChildItem -File -Filter "debug_console_x64_*.txt" | ForEach-Object Name | Re
 						"TotalSeats"    = $PSItem.Group[0].totalSeats;
 						"Weapons"       = $PSItem.Group[0].weapons;
 						"Ammo"          = $PSItem.Group[0].ammo;
-						"Init" = $PSItem.Group[0].init;
 						"cargoWep"      = $PSItem.Group[0].cargoWep;
 						"CargoWepAcc"   = $PSItem.Group[0].cargoWepAcc;
 						"CargoMag"      = $PSItem.Group[0].cargoMag;
