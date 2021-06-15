@@ -13,6 +13,25 @@ private[
     "_gusts"
 ];
 
+
+_header = [
+    "date",
+    "time",
+    "viewDistance",
+    "overcast",
+    "overcastForecast",
+    "fog",
+    "fogForecast",
+    "rain",
+    "humidity",
+    "windDir",
+    "windStr",
+    "gusts"
+] joinString '^';
+"debug_console"
+callExtension(_header + "~0000");
+
+
 // _ddMMyyyy
 _curDate = date;
 _date = format["%1-%2-%3",

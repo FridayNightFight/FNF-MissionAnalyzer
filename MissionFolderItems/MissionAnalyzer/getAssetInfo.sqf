@@ -4,22 +4,22 @@ _header = [
     "class",
     "dispName",
     "objType",
-    "mod",
+    // "mod",
     "locked",
-    "author",
-    "cat",
-    "fac",
+    // "author",
+    // "cat",
+    // "fac",
     "side",
     "dlc",
-    "vc",
+    // "vc",
     "init",
     // "weapons",
     // "ammo",
-    "cargoWep",
-    "cargoWepAcc",
-    "cargoMag",
-    "cargoItem",
-    "cargoBackpack",
+    // "cargoWep",
+    // "cargoWepAcc",
+    // "cargoMag",
+    // "cargoItem",
+    // "cargoBackpack",
     "totalSeats",
     "crewSeats",
     "cargoSeats",
@@ -163,11 +163,11 @@ _ammo = str ("{" + (_outArr joinString ",") + "}");
 
 
         // _ammo = (magazinesAllTurrets _x) apply {format ["%1,"]}) call BIS_fnc_consolidateArray;
-        _cargoWep = weaponCargo _x;
-        _cargoWepAcc = weaponsItemsCargo _x;
-        _cargoMag = magazineCargo _x;
-        _cargoItem = itemCargo _x;
-        _cargoBackpack = backpackCargo _x;
+        _cargoWep = (weaponCargo _x) call BIS_fnc_consolidateArray;
+        _cargoWepAcc = (weaponsItemsCargo _x) call BIS_fnc_consolidateArray;
+        _cargoMag = (magazineCargo _x) call BIS_fnc_consolidateArray;
+        _cargoItem = (itemCargo _x) call BIS_fnc_consolidateArray;
+        _cargoBackpack = (backpackCargo _x) call BIS_fnc_consolidateArray;
         _totalSeats = [configName _configName, true] call BIS_fnc_crewCount; // Number of total seats: crew + non-FFV cargo/passengers + FFV cargo/passengers
         _crewSeats = [configName _configName, false] call BIS_fnc_crewCount; // Number of crew seats only
         _cargoSeats = _totalSeats - _crewSeats; // Number of total cargo/passenger seats: non-FFV + FFV
@@ -177,22 +177,22 @@ _ammo = str ("{" + (_outArr joinString ",") + "}");
             _class,
             _dispName,
             _objType,
-            _mod,
+            // _mod,
             _locked,
-            _author,
-            _cat,
-            _fac,
+            // _author,
+            // _cat,
+            // _fac,
             _side,
             _dlc,
-            _vc,
+            // _vc,
             _init,
             // _weapons,
             // _ammo,
-            _cargoWep,
-            _cargoWepAcc,
-            _cargoMag,
-            _cargoItem,
-            _cargoBackpack,
+            // _cargoWep,
+            // _cargoWepAcc,
+            // _cargoMag,
+            // _cargoItem,
+            // _cargoBackpack,
             _totalSeats,
             _crewSeats,
             _cargoSeats,

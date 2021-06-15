@@ -29,10 +29,10 @@ call compile preprocessFileLineNumbers 'config.sqf';
 
 
 _header = [
-    "author",
-    "missionName",
     "missionNameSource",
+    "missionName",
     "missionDesc",
+    "author",
     "lobbyText",
     "gameMode",
     "defender",
