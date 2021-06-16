@@ -1,8 +1,9 @@
 /*Sets the MAT weapon and ammo class*/
 
-private "_at";
+if (isNil "phx_bluAT") exitWith {};
 
-switch (playerSide) do {
+private "_at";
+switch (([_this] call BIS_fnc_objectSide)) do {
   case east: {_at = phx_redAT};
   case west: {_at = phx_bluAT};
   case independent: {_at = phx_grnAT};
