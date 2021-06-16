@@ -74,11 +74,25 @@ _indUniform = phx_indforUniform;
 _bluWeapons = phx_bluforWeapons;
 _opfWeapons = phx_opforWeapons;
 _indWeapons = phx_indforWeapons;
-_bluAT = phx_bluAT;
-_opfAT = phx_redAT;
-_indAT = phx_grnAT;
-_magOptics = phx_magnifiedOptics;
-_addNVG = phx_addNVG;
+if (
+    !isNil "phx_bluAT" &&
+    !isNil "phx_redAT" &&
+    !isNil "phx_grnAT" &&
+    !isNil "phx_magnifiedOptics" &&
+    !isNil "phx_addNVG"
+) then {
+    _bluAT = phx_bluAT;
+    _opfAT = phx_redAT;
+    _indAT = phx_grnAT;
+    _magOptics = phx_magnifiedOptics;
+    _addNVG = phx_addNVG;
+} else {
+    _bluAT = "n/a";
+    _opfAT = "n/a";
+    _indAT = "n/a";
+    _magOptics = "n/a";
+    _addNVG = "n/a";
+};
 _fortifyEnabled = phx_allowFortify;
 _fortifyPoints = phx_fortifyPoints;
 _startVisible = phx_enemyStartVisible;
@@ -110,7 +124,26 @@ private _output = [
     _startVisible,
     _maxViewDistance
 ] joinString '^';
+
+PX_fnc_stringReplace = {
+	params["_str", "_find", "_replace"];
+	
+	private _return = "";
+	private _len = count _find;	
+	private _pos = _str find _find;
+
+	while {(_pos != -1) && (count _str > 0)} do {
+		_return = _return + (_str select [0, _pos]) + _replace;
+		
+		_str = (_str select [_pos+_len]);
+		_pos = _str find _find;
+	};	
+	_return + _str;
+};
+
+_endOut = [_output, '%', 'PCT'] call PX_fnc_stringReplace;
+
 "debug_console"
-callExtension(_output + "~0000");
+callExtension(_endOut + "~0000");
 "debug_console"
 callExtension("X");
