@@ -66,7 +66,31 @@ _header = [
         _dispName = getText(_configName >> 'displayName');
         _objType = (_x call BIS_fnc_objectType) select 1;
         _locked = locked _x;
+
+
         _init = str((_x get3DENAttribute "Init") select 0);
+
+        PX_fnc_stringReplace = {
+            params["_str", "_find", "_replace"];
+            
+            private _return = "";
+            private _len = count _find;	
+            private _pos = _str find _find;
+
+            while {(_pos != -1) && (count _str > 0)} do {
+                _return = _return + (_str select [0, _pos]) + _replace;
+                
+                _str = (_str select [_pos+_len]);
+                _pos = _str find _find;
+            };	
+            _return + _str;
+        };
+
+        _init = [_init, '
+        ', ''] call PX_fnc_stringReplace;
+
+
+
         _mod = configSourceMod _configName;
         _author = getText(_configName >> 'author');
         _cat = getText(_configName >> 'category');
