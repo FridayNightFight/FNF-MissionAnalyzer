@@ -59,14 +59,29 @@ BEGIN {
 }
 
 PROCESS {
+
+	$FrameworkVersion = (Get-Content 'version.txt' | Select-Object -First 1) -replace '"', ''
 	$Files | ForEach-Object { $ExportedData += (Import-Csv $PSItem -Delimiter '^') }
 
 
 
 	$MissionInfo = $ExportedData | Where-Object { $PSItem.gameMode }
+	$MissionInfo | Add-Member -NotePropertyMembers @{"Framework Version" = $FrameworkVersion }
 	$Weather = $ExportedData | Where-Object { $PSItem.overcast }
 	$Soldiers = $ExportedData | Where-Object { $PSItem.roleDescription }
 	$Vehicles = $ExportedData | Where-Object { $PSItem.totalSeats }
+
+	$SoldiersBySide = $Soldiers | Group-Object Side | Sort-Object name
+	$SoldiersByTypeBLU = $Soldiers | Where-Object { $_.Side -eq 'BLUFOR' } | Group-Object objectType | Sort-Object name
+	$SoldiersByTypeOPF = $Soldiers | Where-Object { $_.Side -eq 'OPFOR' } | Group-Object objectType | Sort-Object name
+	$SoldiersByTypeGUER = $Soldiers | Where-Object { $_.Side -eq 'Independent' } | Group-Object objectType | Sort-Object name
+	$SoldiersByTypeCIV = $Soldiers | Where-Object { $_.Side -eq 'Civilian' } | Group-Object objectType | Sort-Object name
+	$SoldiersByTypeLogic = $Soldiers | Where-Object { $_.Side -eq 'Game Logic' } | Group-Object objectType | Sort-Object name
+
+
+	$Charlie = $Soldiers | Where-Object RoleDescription -Match 'Charlie 2' | Select-Object Side, ObjectType, RoleDescription
+	$Golf = $Soldiers | Where-Object RoleDescription -Match 'Golf' | Select-Object Side, ObjectType, RoleDescription
+	$Hotel = $Soldiers | Where-Object RoleDescription -Match 'Hotel' | Select-Object Side, ObjectType, RoleDescription
 
 
 	Set-Location $StartPath
@@ -82,7 +97,7 @@ PROCESS {
 	$output > 'text.json'
 
 
-
+	# TO DO re-adding the Logic/Triggers/Markers(Required Objects)
 
 	$PreContent = @"
 <head>
@@ -93,7 +108,7 @@ PROCESS {
 		font-family: 'Open Sans', sans-serif;
 	}
 
-	h2 {
+	h1, h2, h3, h4 {
 		text-align: center;
 	}
 
@@ -132,8 +147,6 @@ PROCESS {
 	$($MissionInfo | ConvertTo-Html -Fragment -As List)
 	<h2>Weather Info</h2>
 	$($Weather | ConvertTo-Html -Fragment -As List)
-	<h2>Soldier Info</h2>
-	$($Soldiers | ConvertTo-Html -Fragment)
 	<h2>Vehicle Info (Condensed)</h2>
 	$($Vehicles | Group-Object dispName, side | ForEach-Object {
 			[PSCustomObject]@{
@@ -147,6 +160,36 @@ PROCESS {
 		} | Sort-Object Locked, Side, ObjectType, Count, DisplayName | ConvertTo-Html  -Fragment)
 	<h2>Vehicle Info</h2>
 	$($Vehicles | ConvertTo-Html -Fragment)
+	<h2>Soldier Info</h2>
+	
+	<h3>Specialty Role Descriptions</h3>
+
+	<h4>Charlie</h4>
+	$($Charlie | ConvertTo-Html -Fragment)
+	<h4>Golf</h4>
+	$($Golf | ConvertTo-Html -Fragment)
+	<h4>Hotel</h4>
+	$($Hotel | ConvertTo-Html -Fragment)
+
+	<h3>Soldiers by Side ($($Soldiers.Count))</h3>
+
+	<h3>BLUFOR</h3>
+	$($SoldiersByTypeBLU | Select-Object Name, Count | ConvertTo-Html -Fragment)
+	<br>
+	<h3>OPFOR</h3>
+	$($SoldiersByTypeOPF | Select-Object Name, Count | ConvertTo-Html -Fragment)
+	<br>
+	<h3>INDFOR</h3>
+	$($SoldiersByTypeGUER | Select-Object Name, Count | ConvertTo-Html -Fragment)
+	<br>
+	<h3>CIV</h3>
+	$($SoldiersByTypeCIV | Select-Object Name, Count | ConvertTo-Html -Fragment)
+	<br>
+	<h3>LOGIC</h3>
+	$($SoldiersByTypeLogic | Select-Object Name, Count | ConvertTo-Html -Fragment)
+
+	<h3>All Soldiers ($($Soldiers.Count))</h3>
+	$($Soldiers | ConvertTo-Html -Fragment)
 "@
 	$output > 'page.html'
 

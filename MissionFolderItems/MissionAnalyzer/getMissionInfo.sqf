@@ -19,7 +19,6 @@ private [
     "_indAT",
     "_magOptics",
     "_addNVG",
-    "_fortifyEnabled",
     "_fortifyPoints",
     "_startVisible",
     "_maxViewDistance"
@@ -49,7 +48,6 @@ _header = [
     "indAT",
     "magOptics",
     "addNVG",
-    "fortifyEnabled",
     "fortifyPoints",
     "startVisible",
     "maxViewDistance"
@@ -93,7 +91,6 @@ if (
     _magOptics = "n/a";
     _addNVG = "n/a";
 };
-_fortifyEnabled = phx_allowFortify;
 _fortifyPoints = phx_fortifyPoints;
 _startVisible = phx_enemyStartVisible;
 _maxViewDistance = phx_maxViewDistance;
@@ -119,7 +116,6 @@ private _output = [
     _indAT,
     _magOptics,
     _addNVG,
-    _fortifyEnabled,
     _fortifyPoints,
     _startVisible,
     _maxViewDistance

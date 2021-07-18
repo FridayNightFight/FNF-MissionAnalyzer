@@ -1,7 +1,7 @@
 // Get asset info
 
 _header = [
-    "class",
+    // "class",
     "dispName",
     "objType",
     // "mod",
@@ -13,6 +13,9 @@ _header = [
     "dlc",
     // "vc",
     "init",
+    "invincible",
+    "health",
+    "fuel",
     // "weapons",
     // "ammo",
     // "cargoWep",
@@ -26,8 +29,7 @@ _header = [
     "nonFFVcargoSeats",
     "ffvCargoSeats"
 ] joinString '^';
-"debug_console"
-        callExtension(_header + "~0000");
+"debug_console" callExtension(_header + "~0000");
 
 
 
@@ -47,6 +49,9 @@ _header = [
             "_side",
             "_dlc",
             "_vc",
+            "_invincible",
+            "_startingHealth",
+            "_startingFuel",
             "_weapons",
             "_ammo",
             "_cargoWep",
@@ -65,7 +70,14 @@ _header = [
         _class = configName _configName;
         _dispName = getText(_configName >> 'displayName');
         _objType = (_x call BIS_fnc_objectType) select 1;
-        _locked = locked _x;
+        _lockedRaw = _x get3DENAttribute "lock";
+        if ((_lockedRaw # 0) > 1) then {_locked = true} else {_locked = false};
+        // [
+        //     "Unlocked",
+        //     "Unlocked",
+        //     "Locked",
+        //     "Locked"
+        // ] select [(_x get3DENAttribute "lock"), 1];
 
 
         _init = str((_x get3DENAttribute "Init") select 0);
@@ -87,7 +99,7 @@ _header = [
         };
 
         _init = [_init, '
-        ', ''] call PX_fnc_stringReplace;
+', ''] call PX_fnc_stringReplace;
 
 
 
@@ -98,92 +110,95 @@ _header = [
         _side = [getNumber(_configName >> 'side')] call BIS_fnc_sideName;
         _dlc = getText(_configName >> 'dlc');
         _vc = getText(_configName >> 'vehicleClass');
+        _invincible = [true, false] select (isDamageAllowed _x);
+        _startingHealth = _x get3DENAttribute "Health";
+        _startingFuel = _x get3DENAttribute "fuel";
         _weapons = weapons _x;
 
 
-// get mags, ammo, and count of each instance
-_className = typeOf _x;
-_outArr = [];
+        // get mags, ammo, and count of each instance
+        _className = typeOf _x;
+        _outArr = [];
 
-_turrets = [typeOf _obj] call BIS_fnc_allTurrets;
-_turrets pushBack [-1];
-_mags = [];
-
-{
-    _turretPath = _x;
-    private _turretConfig = [_className, _turretPath] call BIS_fnc_turretConfig;
-    private _turretDisplayName = [_turretConfig] call BIS_fnc_displayName;
-    // private _weps = [_turretConfig, "weapons"] call BIS_fnc_returnConfigEntry;
-    private _weps = _obj weaponsTurret _turretPath;
-    _turretMags = _obj magazinesTurret _turretPath;
-    _thisTurretWepsAmmo = [];
-    {
-        private _thisWepDetails = [];
-
-        private _wepConfig = [configFile >> "CfgWeapons" >> _x] call BIS_fnc_getCfg;
-        private _wepClassName = configName _wepConfig;
-        private _wepDisplayName = [_wepConfig] call BIS_fnc_displayName;
-        private _compatMags = [_wepConfig, true] call CBA_fnc_compatibleMagazines;
+        _turrets = [typeOf _obj] call BIS_fnc_allTurrets;
+        _turrets pushBack [-1];
+        _mags = [];
 
         {
-            // "debug_console" callExtension (str _magCount + "#0100");
-            _thisMag = _x;
-            private _magConfig = (configFile >> "CfgMagazines" >> _thisMag);
-            private _magName = [(_magConfig >> "displayName"), "STRING", "Magazine"] call CBA_fnc_getConfigEntry;
-            private _magClass = configName _magConfig;
-            private _magAmmo = _obj magazineTurretAmmo [_thisMag, _turretPath];
+            _turretPath = _x;
+            private _turretConfig = [_className, _turretPath] call BIS_fnc_turretConfig;
+            private _turretDisplayName = [_turretConfig] call BIS_fnc_displayName;
+            // private _weps = [_turretConfig, "weapons"] call BIS_fnc_returnConfigEntry;
+            private _weps = _obj weaponsTurret _turretPath;
+            _turretMags = _obj magazinesTurret _turretPath;
+            _thisTurretWepsAmmo = [];
+            {
+                private _thisWepDetails = [];
 
-            if (_magName isEqualTo "") then {_magName = "Magazine"};
+                private _wepConfig = [configFile >> "CfgWeapons" >> _x] call BIS_fnc_getCfg;
+                private _wepClassName = configName _wepConfig;
+                private _wepDisplayName = [_wepConfig] call BIS_fnc_displayName;
+                private _compatMags = [_wepConfig, true] call CBA_fnc_compatibleMagazines;
+
+                {
+                    // "debug_console" callExtension (str _magCount + "#0100");
+                    _thisMag = _x;
+                    private _magConfig = (configFile >> "CfgMagazines" >> _thisMag);
+                    private _magName = [(_magConfig >> "displayName"), "STRING", "Magazine"] call CBA_fnc_getConfigEntry;
+                    private _magClass = configName _magConfig;
+                    private _magAmmo = _obj magazineTurretAmmo [_thisMag, _turretPath];
+
+                    if (_magName isEqualTo "") then {_magName = "Magazine"};
+                    
+                    _thisWepDetails pushBack [
+                        _magName,
+                        _magClass,
+                        _magAmmo
+                    ];
+                } forEach _turretMags;
+
+                _validMags = (_thisWepDetails select {(_x # 1) in _compatMags}) call BIS_fnc_consolidateArray;
+
+
+                _validMagsJSON = [];
+                {
+                    _validMagsJSON pushBack text format['"%2": {
+                        "magName": "%1",
+                        "magClass": "%2",
+                        "magAmmo": %3,
+                        "magCount": %4
+                    }',
+                        _x # 0 # 0,
+                        _x # 0 # 1,
+                        _x # 0 # 2,
+                        _x # 1
+                    ];
+                } forEach _validMags;
+                
+                _thisTurretWepsAmmo pushBack text format['"%1" : {
+                    "displayName" : "%1",
+                    "className": "%2",
+                    "magazines": {%3}
+                    }',
+                    _wepDisplayName,
+                    _wepClassName,
+                    _validMagsJSON joinString ","
+                ];
+
+            } forEach _weps;
             
-            _thisWepDetails pushBack [
-                _magName,
-                _magClass,
-                _magAmmo
+
+            _outArr pushBack text format['
+                "Turret Path %1 ''%2''" : {
+                    %3
+                }',
+            _turretPath,
+            _turretDisplayName,
+            _thisTurretWepsAmmo joinString ","
             ];
-        } forEach _turretMags;
 
-        _validMags = (_thisWepDetails select {(_x # 1) in _compatMags}) call BIS_fnc_consolidateArray;
-
-
-        _validMagsJSON = [];
-        {
-            _validMagsJSON pushBack text format['"%2": {
-                "magName": "%1",
-                "magClass": "%2",
-                "magAmmo": %3,
-                "magCount": %4
-            }',
-                _x # 0 # 0,
-                _x # 0 # 1,
-                _x # 0 # 2,
-                _x # 1
-            ];
-        } forEach _validMags;
-        
-        _thisTurretWepsAmmo pushBack text format['"%1" : {
-            "displayName" : "%1",
-            "className": "%2",
-            "magazines": {%3}
-            }',
-            _wepDisplayName,
-            _wepClassName,
-            _validMagsJSON joinString ","
-        ];
-
-    } forEach _weps;
-    
-
-    _outArr pushBack text format['
-        "Turret Path %1 ''%2''" : {
-            %3
-        }',
-    _turretPath,
-    _turretDisplayName,
-    _thisTurretWepsAmmo joinString ","
-    ];
-
-} forEach _turrets;
-_ammo = str ("{" + (_outArr joinString ",") + "}");
+        } forEach _turrets;
+        _ammo = str ("{" + (_outArr joinString ",") + "}");
 
 
         // _ammo = (magazinesAllTurrets _x) apply {format ["%1,"]}) call BIS_fnc_consolidateArray;
@@ -198,7 +213,7 @@ _ammo = str ("{" + (_outArr joinString ",") + "}");
         _nonFFVcargoSeats = getNumber(_configName >> "transportSoldier"); // Number of non-FFV cargo seats only
         _ffvCargoSeats = _cargoSeats - _nonFFVcargoSeats; // Number of FFV cargo seats only
         private _output = [
-            _class,
+            // _class,
             _dispName,
             _objType,
             // _mod,
@@ -210,6 +225,9 @@ _ammo = str ("{" + (_outArr joinString ",") + "}");
             _dlc,
             // _vc,
             _init,
+            _invincible,
+            _startingHealth,
+            _startingFuel,
             // _weapons,
             // _ammo,
             // _cargoWep,
