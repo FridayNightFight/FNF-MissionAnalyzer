@@ -27,17 +27,26 @@ _cleanGroundObjs = {
 
 _stripUnits = {
 	{ // strip all units
-		if (_x isKindOf "CAManBase") then 
+		private _entity = _x;
+		if (_entity isKindOf "CAManBase") then 
 		{
-			removeAllItems _x;
-			removeAllWeapons _x;
-			removeUniform _x;
-			removeVest _x;
-			removeBackpack _x;
-			removeHeadgear _x;
-			removeGoggles _x;
-
-			save3DENInventory [_x]; 
+			removeAllItems _entity;
+			removeAllWeapons _entity;
+			// removeUniform _x;
+			removeVest _entity;
+			removeBackpack _entity;
+			removeHeadgear _entity;
+			removeGoggles _entity;
+			{
+				_entity unassignItem _x;
+				_entity removeItem _x;
+			} forEach [
+				"NVGoggles",
+				"NVGoggles_OPFOR",
+				"NVGoggles_INDEP"
+			];
+			_entity set3DENAttribute ["ControlMP", true];
+			save3DENInventory [_entity]; 
 		};
 	} forEach all3DENEntities # 0;
 };
