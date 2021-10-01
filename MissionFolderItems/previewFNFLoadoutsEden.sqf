@@ -30,13 +30,7 @@ _stripUnits = {
 		private _entity = _x;
 		if (_entity isKindOf "CAManBase") then 
 		{
-			removeAllItems _entity;
-			removeAllWeapons _entity;
-			// removeUniform _x;
-			removeVest _entity;
-			removeBackpack _entity;
-			removeHeadgear _entity;
-			removeGoggles _entity;
+			_entity unlinkItem "ItemRadio";
 			{
 				_entity unassignItem _x;
 				_entity removeItem _x;
@@ -45,6 +39,13 @@ _stripUnits = {
 				"NVGoggles_OPFOR",
 				"NVGoggles_INDEP"
 			];
+			removeAllItems _entity;
+			removeAllWeapons _entity;
+			// removeUniform _x;
+			removeVest _entity;
+			removeBackpack _entity;
+			removeHeadgear _entity;
+			removeGoggles _entity;
 			_entity set3DENAttribute ["ControlMP", true];
 			save3DENInventory [_entity]; 
 		};
